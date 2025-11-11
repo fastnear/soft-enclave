@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEAR Counter Contract - Soft Enclave Demo</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #00C1DE;
+      padding-bottom: 10px;
+    }
+    .section {
+      margin: 20px 0;
+      padding: 15px;
+      border-left: 4px solid #00C1DE;
+      background: #f9f9f9;
+    }
+    button {
+      background: #00C1DE;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #0099B8;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .counter-display {
+      font-size: 48px;
+      font-weight: bold;
+      color: #00C1DE;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .status.info { background: #E3F2FD; color: #1565C0; }
+    .status.success { background: #E8F5E9; color: #2E7D32; }
+    .status.error { background: #FFEBEE; color: #C62828; }
+    .metrics {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #666;
+      margin-top: 10px;
+    }
+    code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔢 NEAR Counter Contract</h1>
+    <p>Demonstrates stateful smart contract execution in soft enclave with NEAR storage shim.</p>
+
+    <div class="section">
+      <h3>Backend Selection</h3>
+      <select id="backendSelect">
+        <option value="worker">Worker Backend (Default)</option>
+        <option value="iframe">iframe Backend</option>
+      </select>
+      <button id="initBtn">Initialize Enclave</button>
+      <div id="initStatus"></div>
+    </div>
+
+    <div class="section">
+      <h3>Counter State</h3>
+      <div class="counter-display" id="counterDisplay">--</div>
+      <div style="text-align: center;">
+        <button id="incrementBtn" disabled>Increment (+1)</button>
+        <button id="decrementBtn" disabled>Decrement (-1)</button>
+        <button id="resetBtn" disabled>Reset to 0</button>
+      </div>
+      <div id="operationStatus"></div>
+      <div id="metrics" class="metrics"></div>
+    </div>
+
+    <div class="section">
+      <h3>Contract Code</h3>
+      <p>The counter contract uses NEAR storage API shim:</p>
+      <pre><code>// Contract state stored via near.storageWrite()
+function increment() {
+  const count = near.storageRead('count') || 0;
+  const newCount = count + 1;
+  near.storageWrite('count', newCount);
+  near.log('Incremented to ' + newCount);
+  return newCount;
+}
+
+function decrement() {
+  const count = near.storageRead('count') || 0;
+  const newCount = count - 1;
+  near.storageWrite('count', newCount);
+  near.log('Decremented to ' + newCount);
+  return newCount;
+}
+
+function getCount() {
+  return near.storageRead('count') || 0;
+}</code></pre>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createEnclave, EnclaveMode } from '../../src/core/enclave-factory.js';
+
+    let enclave = null;
+    let contractState = { count: 0 };
+
+    // Contract code (will be enhanced with NEAR shims in Phase 6)
+    const contractCode = `
+      // NEAR storage shim (Phase 6 will inject this)
+      const state = JSON.parse(context.state || '{}');
+      const logs = [];
+
+      const near = {
+        storageRead: (key) => state[key],
+        storageWrite: (key, value) => { state[key] = value; },
+        log: (...args) => { logs.push(args.join(' ')); }
+      };
+
+      function increment() {
+        const count = near.storageRead('count') || 0;
+        const newCount = count + 1;
+        near.storageWrite('count', newCount);
+        near.log('Incremented to ' + newCount);
+        return newCount;
+      }
+
+      function decrement() {
+        const count = near.storageRead('count') || 0;
+        const newCount = count - 1;
+        near.storageWrite('count', newCount);
+        near.log('Decremented to ' + newCount);
+        return newCount;
+      }
+
+      function getCount() {
+        return near.storageRead('count') || 0;
+      }
+
+      function reset() {
+        near.storageWrite('count', 0);
+        near.log('Reset to 0');
+        return 0;
+      }
+
+      // Execute operation
+      const result = eval(context.operation + '()');
+
+      // Return result with state
+      ({ result, state: JSON.stringify(state), logs });
+    `;
+
+    async function initializeEnclave() {
+      const backendSelect = document.getElementById('backendSelect');
+      const initStatus = document.getElementById('initStatus');
+      const initBtn = document.getElementById('initBtn');
+
+      initBtn.disabled = true;
+      initStatus.innerHTML = '<div class="status info">Initializing enclave...</div>';
+
+      try {
+        const mode = backendSelect.value === 'iframe' ? EnclaveMode.IFRAME : EnclaveMode.WORKER;
+        const options = { mode };
+
+        if (mode === EnclaveMode.IFRAME) {
+          options.enclaveOrigin = 'http://localhost:8091';
+        }
+
+        enclave = createEnclave(options);
+        await enclave.initialize();
+
+        initStatus.innerHTML = `<div class="status success">✓ Enclave initialized (${backendSelect.value} backend)</div>`;
+
+        // Enable buttons
+        document.getElementById('incrementBtn').disabled = false;
+        document.getElementById('decrementBtn').disabled = false;
+        document.getElementById('resetBtn').disabled = false;
+
+        // Load initial state
+        await updateCounter();
+      } catch (error) {
+        initStatus.innerHTML = `<div class="status error">✗ Initialization failed: ${error.message}</div>`;
+        initBtn.disabled = false;
+      }
+    }
+
+    async function executeOperation(operation) {
+      const operationStatus = document.getElementById('operationStatus');
+      const metricsDiv = document.getElementById('metrics');
+
+      operationStatus.innerHTML = '<div class="status info">Executing...</div>';
+
+      try {
+        const startTime = performance.now();
+
+        const { result } = await enclave.execute(contractCode, {
+          operation,
+          state: JSON.stringify(contractState)
+        });
+
+        const duration = performance.now() - startTime;
+
+        // Update state
+        if (result.state) {
+          contractState = JSON.parse(result.state);
+        }
+
+        // Update display
+        document.getElementById('counterDisplay').textContent = result.result;
+
+        // Show logs
+        const logsText = result.logs && result.logs.length > 0
+          ? result.logs.join(', ')
+          : 'No logs';
+
+        operationStatus.innerHTML = `<div class="status success">✓ Operation complete: ${logsText}</div>`;
+
+        metricsDiv.textContent = `Execution time: ${duration.toFixed(2)}ms | State: ${JSON.stringify(contractState)}`;
+      } catch (error) {
+        operationStatus.innerHTML = `<div class="status error">✗ Operation failed: ${error.message}</div>`;
+      }
+    }
+
+    async function updateCounter() {
+      document.getElementById('counterDisplay').textContent = contractState.count || 0;
+    }
+
+    // Event listeners
+    document.getElementById('initBtn').addEventListener('click', initializeEnclave);
+    document.getElementById('incrementBtn').addEventListener('click', () => executeOperation('increment'));
+    document.getElementById('decrementBtn').addEventListener('click', () => executeOperation('decrement'));
+    document.getElementById('resetBtn').addEventListener('click', () => executeOperation('reset'));
+  </script>
+</body>
+</html>

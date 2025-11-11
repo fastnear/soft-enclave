@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soft Enclave - Persistence Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Monaco', 'Menlo', monospace;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e0e0e0;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(90deg, #00d4ff, #7000ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .security-notice {
+      background: rgba(255, 170, 0, 0.1);
+      border: 2px solid rgba(255, 170, 0, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      font-size: 0.9rem;
+    }
+
+    .security-notice h3 {
+      color: #ffaa00;
+      margin-bottom: 0.5rem;
+    }
+
+    .sections {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .section h2 {
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      color: #00d4ff;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.4rem;
+      color: #aaa;
+      font-size: 0.85rem;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 0.7rem;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #00d4ff;
+    }
+
+    button {
+      background: linear-gradient(135deg, #7000ff, #00d4ff);
+      color: white;
+      border: none;
+      padding: 0.7rem 1.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: transform 0.2s;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .output {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .metric {
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      border-radius: 6px;
+      padding: 0.8rem;
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #00d4ff;
+      margin-bottom: 0.3rem;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: #888;
+    }
+
+    .status {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+    }
+
+    .status.success {
+      background: rgba(0, 255, 100, 0.1);
+      border: 1px solid rgba(0, 255, 100, 0.3);
+      color: #00ff64;
+    }
+
+    .status.error {
+      background: rgba(255, 0, 50, 0.1);
+      border: 1px solid rgba(255, 0, 50, 0.3);
+      color: #ff0032;
+    }
+
+    .key-list {
+      list-style: none;
+    }
+
+    .key-item {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.8rem;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .key-info {
+      flex: 1;
+    }
+
+    .key-account {
+      font-weight: 600;
+      color: #00d4ff;
+      margin-bottom: 0.2rem;
+    }
+
+    .key-public {
+      font-size: 0.75rem;
+      color: #888;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .delete-btn {
+      background: rgba(255, 0, 50, 0.2);
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      width: auto;
+      margin: 0;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 768px) {
+      .sections {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Soft Enclave - Persistence Demo</h1>
+    <p class="subtitle">WebCrypto-based key custody with IndexedDB storage</p>
+
+    <div class="security-notice">
+      <h3>🔐 Security Model - Defense-in-Depth</h3>
+      <p>
+        <strong>Tier 1 (Excellent):</strong> WebCrypto non-extractable keys - Master key cannot be exported (browser enforced)<br>
+        <strong>Tier 2 (Moderate):</strong> Key wrapping - Private keys encrypted before IndexedDB storage<br>
+        <strong>Tier 3 (Best-effort):</strong> Ephemeral unwrapping - Keys decrypted only during operations (~30-50ms)<br>
+        <strong>Tier 4 (Limited):</strong> Memory zeroing - Best-effort cleanup (JavaScript doesn't guarantee)<br><br>
+        <strong>NOT a hardware TEE</strong> - Provides practical security improvements over localStorage
+      </p>
+    </div>
+
+    <div class="sections">
+      <!-- Keystore Section -->
+      <div class="section">
+        <h2>🔑 Keystore</h2>
+
+        <div class="form-group">
+          <label>Account ID</label>
+          <input type="text" id="accountId" placeholder="alice.near" value="demo.near">
+        </div>
+
+        <div class="form-group">
+          <label>Private Key (ed25519:base58)</label>
+          <textarea id="privateKey" rows="3" placeholder="ed25519:..."></textarea>
+        </div>
+
+        <button onclick="storeKey()">Store Key</button>
+        <button onclick="generateDemoKey()">Generate Demo Key</button>
+
+        <div class="form-group" style="margin-top: 1.5rem;">
+          <label>Data to Sign</label>
+          <input type="text" id="signData" placeholder="Hello NEAR!" value="Hello NEAR!">
+        </div>
+
+        <button onclick="signData()">Sign with Stored Key</button>
+
+        <div id="keystoreOutput" class="output"></div>
+      </div>
+
+      <!-- Encrypted Storage Section -->
+      <div class="section">
+        <h2>💾 Encrypted Storage</h2>
+
+        <div class="form-group">
+          <label>Key</label>
+          <input type="text" id="storageKey" placeholder="my-config" value="user-preferences">
+        </div>
+
+        <div class="form-group">
+          <label>Value (JSON)</label>
+          <textarea id="storageValue" rows="3" placeholder='{"theme": "dark"}'>{
+  "theme": "dark",
+  "language": "en"
+}</textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Type (optional)</label>
+          <input type="text" id="storageType" placeholder="config" value="config">
+        </div>
+
+        <button onclick="setStorage()">Store Encrypted</button>
+        <button onclick="getStorage()">Retrieve & Decrypt</button>
+        <button onclick="queryStorage()">Query All</button>
+
+        <div id="storageOutput" class="output"></div>
+      </div>
+
+      <!-- Stored Keys List -->
+      <div class="section">
+        <h2>📋 Stored Keys</h2>
+        <button onclick="loadKeyList()">Refresh List</button>
+        <ul id="keyList" class="key-list"></ul>
+      </div>
+
+      <!-- Security Metrics -->
+      <div class="section">
+        <h2>📊 Security Metrics</h2>
+        <button onclick="refreshMetrics()">Refresh Metrics</button>
+
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-value" id="avgExposure">--</div>
+            <div class="metric-label">Avg Key Exposure (ms)</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="totalOps">0</div>
+            <div class="metric-label">Total Operations</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value" id="storageRecords">0</div>
+            <div class="metric-label">Storage Records</div>
+          </div>
+        </div>
+
+        <div id="metricsDetail" class="output"></div>
+      </div>
+    </div>
+
+    <div id="status"></div>
+  </div>
+
+  <script type="module">
+    // Import persistence modules
+    import { Keystore, getKeystore } from '../packages/shared/src/keystore.js';
+    import { EncryptedStorage, getStorage } from '../packages/shared/src/storage.js';
+
+    // Import NEAR transaction utilities (for demo key generation)
+    import { parsePrivateKey, derivePublicKey, encodePublicKey } from '../packages/near/src/enclave/near-tx.js';
+    import { encodeBase58 } from '../packages/near/src/enclave/base58.js';
+    import * as nacl from 'tweetnacl';
+
+    // Global instances
+    let keystore, storage;
+
+    // Initialize on load
+    (async () => {
+      try {
+        keystore = await getKeystore();
+        storage = await getStorage();
+        showStatus('Initialized successfully!', 'success');
+        await loadKeyList();
+        await refreshMetrics();
+      } catch (error) {
+        showStatus(`Initialization failed: ${error.message}`, 'error');
+      }
+    })();
+
+    // Store a key
+    window.storeKey = async () => {
+      try {
+        const accountId = document.getElementById('accountId').value;
+        const privateKeyStr = document.getElementById('privateKey').value;
+
+        if (!accountId || !privateKeyStr) {
+          throw new Error('Account ID and private key required');
+        }
+
+        const privateKeyBytes = parsePrivateKey(privateKeyStr);
+        const publicKey = derivePublicKey(privateKeyBytes);
+        const publicKeyStr = encodePublicKey(publicKey);
+
+        await keystore.storeKey(accountId, privateKeyBytes, publicKeyStr);
+
+        document.getElementById('keystoreOutput').textContent =
+          `✅ Stored key for ${accountId}\nPublic key: ${publicKeyStr}`;
+        showStatus('Key stored successfully!', 'success');
+        await loadKeyList();
+        await refreshMetrics();
+      } catch (error) {
+        document.getElementById('keystoreOutput').textContent = `❌ Error: ${error.message}`;
+        showStatus(`Failed to store key: ${error.message}`, 'error');
+      }
+    };
+
+    // Generate a demo key (for testing)
+    window.generateDemoKey = async () => {
+      try {
+        const keyPair = nacl.sign.keyPair();
+        const privateKeyBase58 = encodeBase58(keyPair.secretKey);
+        const privateKeyStr = `ed25519:${privateKeyBase58}`;
+
+        document.getElementById('privateKey').value = privateKeyStr;
+        document.getElementById('keystoreOutput').textContent =
+          `✅ Generated demo key\nPublic key: ed25519:${encodeBase58(keyPair.publicKey)}\n\n⚠️ This is a TEST key. Never use for real transactions!`;
+      } catch (error) {
+        document.getElementById('keystoreOutput').textContent = `❌ Error: ${error.message}`;
+      }
+    };
+
+    // Sign data with stored key
+    window.signData = async () => {
+      try {
+        const accountId = document.getElementById('accountId').value;
+        const data = document.getElementById('signData').value;
+
+        if (!accountId || !data) {
+          throw new Error('Account ID and data required');
+        }
+
+        const dataBytes = new TextEncoder().encode(data);
+        const signature = await keystore.sign(accountId, dataBytes);
+        const signatureBase58 = encodeBase58(signature);
+
+        document.getElementById('keystoreOutput').textContent =
+          `✅ Signed data for ${accountId}\nSignature: ${signatureBase58}`;
+        showStatus('Data signed successfully!', 'success');
+        await refreshMetrics();
+      } catch (error) {
+        document.getElementById('keystoreOutput').textContent = `❌ Error: ${error.message}`;
+        showStatus(`Failed to sign: ${error.message}`, 'error');
+      }
+    };
+
+    // Store encrypted data
+    window.setStorage = async () => {
+      try {
+        const key = document.getElementById('storageKey').value;
+        const valueStr = document.getElementById('storageValue').value;
+        const type = document.getElementById('storageType').value;
+
+        if (!key || !valueStr) {
+          throw new Error('Key and value required');
+        }
+
+        const value = JSON.parse(valueStr);
+        await storage.set(key, value, type || undefined);
+
+        document.getElementById('storageOutput').textContent =
+          `✅ Stored encrypted data\nKey: ${key}\nType: ${type || 'none'}`;
+        showStatus('Data stored successfully!', 'success');
+        await refreshMetrics();
+      } catch (error) {
+        document.getElementById('storageOutput').textContent = `❌ Error: ${error.message}`;
+        showStatus(`Failed to store: ${error.message}`, 'error');
+      }
+    };
+
+    // Retrieve encrypted data
+    window.getStorage = async () => {
+      try {
+        const key = document.getElementById('storageKey').value;
+        if (!key) {
+          throw new Error('Key required');
+        }
+
+        const value = await storage.get(key);
+        if (value === null) {
+          throw new Error('Key not found');
+        }
+
+        document.getElementById('storageOutput').textContent =
+          `✅ Retrieved and decrypted\nKey: ${key}\nValue:\n${JSON.stringify(value, null, 2)}`;
+        showStatus('Data retrieved successfully!', 'success');
+      } catch (error) {
+        document.getElementById('storageOutput').textContent = `❌ Error: ${error.message}`;
+        showStatus(`Failed to retrieve: ${error.message}`, 'error');
+      }
+    };
+
+    // Query storage
+    window.queryStorage = async () => {
+      try {
+        const results = await storage.query();
+        document.getElementById('storageOutput').textContent =
+          `✅ Query results (${results.length} records):\n${JSON.stringify(results, null, 2)}`;
+        showStatus('Query completed!', 'success');
+      } catch (error) {
+        document.getElementById('storageOutput').textContent = `❌ Error: ${error.message}`;
+        showStatus(`Failed to query: ${error.message}`, 'error');
+      }
+    };
+
+    // Load list of stored keys
+    window.loadKeyList = async () => {
+      try {
+        const accounts = await keystore.listAccounts();
+        const listEl = document.getElementById('keyList');
+
+        if (accounts.length === 0) {
+          listEl.innerHTML = '<li style="color: #888;">No keys stored</li>';
+          return;
+        }
+
+        listEl.innerHTML = accounts.map(account => `
+          <li class="key-item">
+            <div class="key-info">
+              <div class="key-account">${account.accountId}</div>
+              <div class="key-public">${account.publicKey}</div>
+            </div>
+            <button class="delete-btn" onclick="deleteKey('${account.accountId}')">Delete</button>
+          </li>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load key list:', error);
+      }
+    };
+
+    // Delete a key
+    window.deleteKey = async (accountId) => {
+      try {
+        await keystore.deleteKey(accountId);
+        showStatus(`Deleted key for ${accountId}`, 'success');
+        await loadKeyList();
+        await refreshMetrics();
+      } catch (error) {
+        showStatus(`Failed to delete: ${error.message}`, 'error');
+      }
+    };
+
+    // Refresh security metrics
+    window.refreshMetrics = async () => {
+      try {
+        const metrics = keystore.getMetrics();
+        const avgExposure = keystore.getAverageKeyExposure();
+        const stats = await storage.getStats();
+
+        document.getElementById('avgExposure').textContent = avgExposure.toFixed(2);
+        document.getElementById('totalOps').textContent = metrics.length;
+        document.getElementById('storageRecords').textContent = stats.totalRecords;
+
+        if (metrics.length > 0) {
+          const latest = metrics.slice(-5);
+          document.getElementById('metricsDetail').textContent =
+            `Latest Operations:\n${latest.map(m =>
+              `${m.operationName}: ${m.keyExposureDurationMs.toFixed(2)}ms exposure, ${m.totalDurationMs.toFixed(2)}ms total`
+            ).join('\n')}`;
+        }
+      } catch (error) {
+        console.error('Failed to refresh metrics:', error);
+      }
+    };
+
+    // Show status message
+    function showStatus(message, type) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`;
+      setTimeout(() => {
+        statusEl.className = 'status';
+        statusEl.textContent = '';
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+{
+  "name": "@near/soft-enclave-core",
+  "version": "0.1.0",
+  "description": "Core enclave factory and base classes",
+  "type": "module",
+  "types": "./dist/esm/index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "scripts": {
+    "build": "tsup",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.js"
+    }
+  },
+  "dependencies": {
+    "@near/soft-enclave-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "rimraf": "*",
+    "tsup": "*",
+    "typescript": "*"
+  },
+  "keywords": [
+    "soft-enclave",
+    "core"
+  ],
+  "author": "",
+  "license": "MIT"
+}

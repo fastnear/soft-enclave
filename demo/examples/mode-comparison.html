@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backend Comparison - Worker vs iframe</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #00C1DE;
+      padding-bottom: 10px;
+    }
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .backend-card {
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    .backend-card.active {
+      border-color: #00C1DE;
+      background: #E3F2FD;
+    }
+    .backend-card h3 {
+      margin-top: 0;
+      color: #00C1DE;
+    }
+    button {
+      background: #00C1DE;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px 0;
+      width: 100%;
+    }
+    button:hover {
+      background: #0099B8;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    .status.info { background: #E3F2FD; color: #1565C0; }
+    .status.success { background: #E8F5E9; color: #2E7D32; }
+    .status.error { background: #FFEBEE; color: #C62828; }
+    .metrics {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid #ddd;
+    }
+    .result {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00C1DE;
+      text-align: center;
+      padding: 15px;
+      background: white;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .comparison-table {
+      width: 100%;
+      margin: 20px 0;
+      border-collapse: collapse;
+    }
+    .comparison-table th,
+    .comparison-table td {
+      padding: 12px;
+      text-align: left;
+      border: 1px solid #ddd;
+    }
+    .comparison-table th {
+      background: #00C1DE;
+      color: white;
+    }
+    .comparison-table tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚖️ Backend Comparison: Worker vs iframe</h1>
+    <p>Compare performance and behavior of both isolation backends side-by-side.</p>
+
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Worker Backend</th>
+          <th>iframe Backend</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Isolation</strong></td>
+          <td>Web Worker (true thread)</td>
+          <td>iframe + MessageChannel</td>
+        </tr>
+        <tr>
+          <td><strong>Protocol</strong></td>
+          <td>Advanced (v1.1)</td>
+          <td>Simple ECDH+HKDF</td>
+        </tr>
+        <tr>
+          <td><strong>Egress Guard</strong></td>
+          <td>Implicit (no DOM)</td>
+          <td>Explicit (runtime patch)</td>
+        </tr>
+        <tr>
+          <td><strong>Production</strong></td>
+          <td>✅ Recommended</td>
+          <td>Development/testing</td>
+        </tr>
+        <tr>
+          <td><strong>Port</strong></td>
+          <td>8081</td>
+          <td>8091</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="comparison-grid">
+      <!-- Worker Backend -->
+      <div class="backend-card" id="workerCard">
+        <h3>🚀 Worker Backend</h3>
+        <button id="workerInitBtn">Initialize Worker</button>
+        <div id="workerStatus"></div>
+        <button id="workerExecuteBtn" disabled>Execute Fibonacci(35)</button>
+        <div class="result" id="workerResult">--</div>
+        <div class="metrics" id="workerMetrics"></div>
+      </div>
+
+      <!-- iframe Backend -->
+      <div class="backend-card" id="iframeCard">
+        <h3>🖼️ iframe Backend</h3>
+        <button id="iframeInitBtn">Initialize iframe</button>
+        <div id="iframeStatus"></div>
+        <button id="iframeExecuteBtn" disabled>Execute Fibonacci(35)</button>
+        <div class="result" id="iframeResult">--</div>
+        <div class="metrics" id="iframeMetrics"></div>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px; padding: 15px; background: #FFF3E0; border-left: 4px solid #FF9800; border-radius: 4px;">
+      <strong>💡 Tip:</strong> Initialize both backends and run the same computation to compare performance.
+      The Worker backend typically has lower initialization overhead, while iframe provides easier debugging.
+    </div>
+  </div>
+
+  <script type="module">
+    import { createEnclave, EnclaveMode } from '../../src/core/enclave-factory.js';
+
+    let workerEnclave = null;
+    let iframeEnclave = null;
+
+    const fibonacciCode = `
+      function fibonacci(n) {
+        if (n <= 1) return n;
+        return fibonacci(n - 1) + fibonacci(n - 2);
+      }
+      fibonacci(35);
+    `;
+
+    // Worker Backend Initialization
+    document.getElementById('workerInitBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('workerInitBtn');
+      const status = document.getElementById('workerStatus');
+      const card = document.getElementById('workerCard');
+
+      btn.disabled = true;
+      status.innerHTML = '<div class="status info">Initializing worker backend...</div>';
+
+      try {
+        const startTime = performance.now();
+
+        workerEnclave = createEnclave({
+          mode: EnclaveMode.WORKER
+        });
+
+        await workerEnclave.initialize();
+
+        const duration = performance.now() - startTime;
+
+        status.innerHTML = `<div class="status success">✓ Initialized in ${duration.toFixed(0)}ms</div>`;
+        card.classList.add('active');
+        document.getElementById('workerExecuteBtn').disabled = false;
+
+        updateMetrics('workerMetrics', {
+          'Backend': 'Worker',
+          'Mode': 'cross-origin worker',
+          'Protocol': 'Advanced (v1.1)',
+          'Init Time': `${duration.toFixed(0)}ms`
+        });
+      } catch (error) {
+        status.innerHTML = `<div class="status error">✗ Failed: ${error.message}</div>`;
+        btn.disabled = false;
+      }
+    });
+
+    // iframe Backend Initialization
+    document.getElementById('iframeInitBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('iframeInitBtn');
+      const status = document.getElementById('iframeStatus');
+      const card = document.getElementById('iframeCard');
+
+      btn.disabled = true;
+      status.innerHTML = '<div class="status info">Initializing iframe backend...</div>';
+
+      try {
+        const startTime = performance.now();
+
+        iframeEnclave = createEnclave({
+          mode: EnclaveMode.IFRAME,
+          enclaveOrigin: 'http://localhost:8091'
+        });
+
+        await iframeEnclave.initialize();
+
+        const duration = performance.now() - startTime;
+
+        status.innerHTML = `<div class="status success">✓ Initialized in ${duration.toFixed(0)}ms</div>`;
+        card.classList.add('active');
+        document.getElementById('iframeExecuteBtn').disabled = false;
+
+        updateMetrics('iframeMetrics', {
+          'Backend': 'iframe',
+          'Mode': 'MessageChannel',
+          'Protocol': 'Simple ECDH+HKDF',
+          'Init Time': `${duration.toFixed(0)}ms`
+        });
+      } catch (error) {
+        status.innerHTML = `<div class="status error">✗ Failed: ${error.message}<br><small>Make sure iframe server is running on port 8091</small></div>`;
+        btn.disabled = false;
+      }
+    });
+
+    // Worker Execute
+    document.getElementById('workerExecuteBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('workerExecuteBtn');
+      const resultDiv = document.getElementById('workerResult');
+
+      btn.disabled = true;
+      resultDiv.textContent = 'Computing...';
+
+      try {
+        const startTime = performance.now();
+        const { result, metrics, totalDurationMs } = await workerEnclave.execute(fibonacciCode);
+        const duration = performance.now() - startTime;
+
+        resultDiv.textContent = `Result: ${result}`;
+
+        updateMetrics('workerMetrics', {
+          'Result': result,
+          'Total Duration': `${totalDurationMs.toFixed(2)}ms`,
+          'Key Exposure': `${metrics.keyExposureMs ? metrics.keyExposureMs.toFixed(2) : 'N/A'}ms`,
+          'Operations': workerEnclave.getMetrics().operationsCount
+        });
+      } catch (error) {
+        resultDiv.textContent = 'Error!';
+        updateMetrics('workerMetrics', {
+          'Error': error.message
+        });
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // iframe Execute
+    document.getElementById('iframeExecuteBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('iframeExecuteBtn');
+      const resultDiv = document.getElementById('iframeResult');
+
+      btn.disabled = true;
+      resultDiv.textContent = 'Computing...';
+
+      try {
+        const startTime = performance.now();
+        const { result, metrics, totalDurationMs } = await iframeEnclave.execute(fibonacciCode);
+        const duration = performance.now() - startTime;
+
+        resultDiv.textContent = `Result: ${result}`;
+
+        updateMetrics('iframeMetrics', {
+          'Result': result,
+          'Total Duration': `${totalDurationMs.toFixed(2)}ms`,
+          'Key Exposure': `${metrics.keyExposureMs ? metrics.keyExposureMs.toFixed(2) : 'N/A'}ms`,
+          'Operations': iframeEnclave.getMetrics().operationsCount
+        });
+      } catch (error) {
+        resultDiv.textContent = 'Error!';
+        updateMetrics('iframeMetrics', {
+          'Error': error.message
+        });
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    function updateMetrics(elementId, data) {
+      const metricsDiv = document.getElementById(elementId);
+      let html = '';
+      for (const [key, value] of Object.entries(data)) {
+        html += `<div class="metric-row"><span>${key}:</span><span><strong>${value}</strong></span></div>`;
+      }
+      metricsDiv.innerHTML = html;
+    }
+  </script>
+</body>
+</html>

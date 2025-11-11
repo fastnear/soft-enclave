@@ -1,0 +1,55 @@
+{
+  "name": "@near/soft-enclave-monorepo",
+  "version": "0.1.0",
+  "description": "Browser-based soft enclave using QuickJS-WASM with cross-origin isolation and encrypted communication",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "yarn workspaces foreach --all -t run build",
+    "type-check": "yarn workspaces foreach --all -t run type-check",
+    "clean": "yarn workspaces foreach --all -t run clean",
+    "dev": "vite",
+    "dev:worker": "node enclave-server.js",
+    "dev:iframe": "node scripts/dev-iframe.mjs",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:security": "vitest run test/red-team.test.js test/nonce-uniqueness.test.js test/deterministic-shims.test.js",
+    "test:hpke": "vitest run test/hpke-protocol.test.js",
+    "test:determinism": "vitest run test/deterministic-shims.test.js",
+    "test:standalone": "vitest run test/standalone-patterns.test.js",
+    "test:integration": "vitest run test/integration.test.js",
+    "test:battle": "vitest run test/battle-tests.test.js",
+    "test:all": "vitest run"
+  },
+  "dependencies": {
+    "@hpke/core": "^1.7.4",
+    "@hpke/dhkem-x25519": "^1.6.4",
+    "borsh": "^2.0.0",
+    "idb": "^8.0.0",
+    "quickjs-emscripten": "^0.31.0",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.2",
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "keywords": [
+    "webassembly",
+    "quickjs",
+    "enclave",
+    "security",
+    "cryptography",
+    "near",
+    "web-crypto"
+  ],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "yarn@4.6.0"
+}

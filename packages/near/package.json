@@ -1,0 +1,50 @@
+{
+  "name": "@near/soft-enclave-near",
+  "version": "0.1.0",
+  "description": "NEAR Protocol adapter for soft-enclave",
+  "type": "module",
+  "types": "./dist/esm/index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "browser": "./dist/umd/browser.global.js",
+  "scripts": {
+    "build": "tsup",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.js"
+    },
+    "./host": {
+      "require": "./dist/cjs/host/index.cjs",
+      "import": "./dist/esm/host/index.js"
+    },
+    "./enclave": {
+      "require": "./dist/cjs/enclave/index.cjs",
+      "import": "./dist/esm/enclave/index.js"
+    }
+  },
+  "dependencies": {
+    "@near/soft-enclave-core": "workspace:*",
+    "@near/soft-enclave-shared": "workspace:*",
+    "borsh": "^2.0.0",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "rimraf": "*",
+    "tsup": "*",
+    "typescript": "*"
+  },
+  "keywords": [
+    "soft-enclave",
+    "near",
+    "adapter"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Computational exploration (separate from production code)
+computation/
+
+# Python
+__pycache__/
+*.pyc
+
+# Media/videos
+media/
+
+# Archives
+*.zip
+
+# OS
+.DS_Store

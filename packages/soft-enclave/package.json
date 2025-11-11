@@ -1,0 +1,59 @@
+{
+  "name": "@near/soft-enclave",
+  "version": "0.1.0",
+  "description": "Browser-based soft enclave using QuickJS-WASM with cross-origin isolation and encrypted communication",
+  "type": "module",
+  "types": "./dist/esm/index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "browser": "./dist/umd/browser.global.js",
+  "scripts": {
+    "build": "tsup",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.js"
+    },
+    "./worker": {
+      "require": "./dist/cjs/worker.cjs",
+      "import": "./dist/esm/worker.js"
+    },
+    "./iframe": {
+      "require": "./dist/cjs/iframe.cjs",
+      "import": "./dist/esm/iframe.js"
+    },
+    "./near": {
+      "require": "./dist/cjs/near.cjs",
+      "import": "./dist/esm/near.js"
+    }
+  },
+  "dependencies": {
+    "@near/soft-enclave-core": "workspace:*",
+    "@near/soft-enclave-iframe": "workspace:*",
+    "@near/soft-enclave-near": "workspace:*",
+    "@near/soft-enclave-shared": "workspace:*",
+    "@near/soft-enclave-worker": "workspace:*"
+  },
+  "devDependencies": {
+    "rimraf": "*",
+    "tsup": "*",
+    "typescript": "*"
+  },
+  "keywords": [
+    "webassembly",
+    "quickjs",
+    "enclave",
+    "security",
+    "cryptography",
+    "near",
+    "web-crypto"
+  ],
+  "author": "",
+  "license": "MIT"
+}

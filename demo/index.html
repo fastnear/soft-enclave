@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEAR WASM Enclave Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+    }
+
+    .header h1 {
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      opacity: 0.9;
+      line-height: 1.5;
+    }
+
+    .content {
+      padding: 2rem;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+    }
+
+    .section h2 {
+      margin-bottom: 1rem;
+      color: #333;
+    }
+
+    .status {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status.pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .status .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      font-weight: 500;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .code-block {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .metric-card {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 6px;
+      border-left: 4px solid #667eea;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 0.25rem;
+    }
+
+    .metric-label {
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .threat-model {
+      background: #f8f9fa;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+
+    .threat-model ul {
+      list-style: none;
+      margin-top: 1rem;
+    }
+
+    .threat-model li {
+      padding: 0.5rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+
+    .threat-model li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #28a745;
+      font-weight: bold;
+    }
+
+    .threat-model li.not-defended::before {
+      content: '✗';
+      color: #dc3545;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.9rem;
+      resize: vertical;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>NEAR WASM Enclave Demo</h1>
+      <p>
+        Browser-based secure enclave using QuickJS-WASM with cross-origin isolation
+        and encrypted communication. This demonstrates practical security improvements
+        over localStorage through defense-in-depth.
+      </p>
+    </div>
+
+    <div class="content">
+      <!-- Initialization Section -->
+      <div class="section">
+        <h2>1. Initialize Enclave</h2>
+        <div id="init-status" class="status pending">
+          <div class="spinner"></div>
+          <div>Click "Initialize" to set up the secure enclave...</div>
+        </div>
+        <button id="init-btn">Initialize Enclave</button>
+      </div>
+
+      <!-- Code Execution Section -->
+      <div class="section">
+        <h2>2. Execute Code in Sandbox</h2>
+        <p style="margin-bottom: 1rem; color: #666;">
+          Execute untrusted JavaScript safely in the QuickJS-WASM sandbox.
+          The code runs in an isolated environment with encrypted context.
+        </p>
+        <textarea id="code-input" placeholder="Enter JavaScript code to execute...">
+// Example: Calculate Fibonacci
+function fibonacci(n) {
+  if (n <= 1) return n;
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+fibonacci(10)
+        </textarea>
+        <div class="button-group">
+          <button id="execute-btn" disabled>Execute Code</button>
+          <button id="malicious-code-btn" disabled>Try Malicious Code</button>
+        </div>
+        <div id="execute-result" style="margin-top: 1rem;"></div>
+      </div>
+
+      <!-- Signing Section -->
+      <div class="section">
+        <h2>3. Sign Transaction (Ephemeral Key)</h2>
+        <p style="margin-bottom: 1rem; color: #666;">
+          Simulate signing a NEAR transaction. The private key is decrypted only
+          during the signing operation (~30-50ms) and immediately zeroed.
+        </p>
+        <button id="sign-btn" disabled>Sign Transaction</button>
+        <div id="sign-result" style="margin-top: 1rem;"></div>
+      </div>
+
+      <!-- Metrics Section -->
+      <div class="section">
+        <h2>4. Security Metrics</h2>
+        <div class="metrics" id="metrics">
+          <div class="metric-card">
+            <div class="metric-value" id="metric-operations">0</div>
+            <div class="metric-label">Total Operations</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="metric-avg-exposure">0ms</div>
+            <div class="metric-label">Avg Key Exposure</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="metric-max-exposure">0ms</div>
+            <div class="metric-label">Max Key Exposure</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Threat Model Section -->
+      <div class="section">
+        <h2>5. Threat Model</h2>
+        <div class="threat-model">
+          <h3>✓ Defends Against:</h3>
+          <ul>
+            <li>XSS attacks trying to steal localStorage</li>
+            <li>Unsophisticated browser extensions</li>
+            <li>Malicious guest code execution</li>
+            <li>Timing attacks (narrow window)</li>
+          </ul>
+
+          <h3 style="margin-top: 1.5rem;">✗ Does NOT Defend Against:</h3>
+          <ul>
+            <li class="not-defended">Sophisticated attackers with persistent access</li>
+            <li class="not-defended">Compromised browser process</li>
+            <li class="not-defended">User with DevTools (by design)</li>
+            <li class="not-defended">Hardware attacks (Spectre, etc.)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./demo.js"></script>
+</body>
+</html>

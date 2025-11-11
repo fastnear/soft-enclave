@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": false,
+    "declaration": true,
+    "module": "NodeNext",
+    "moduleResolution": "node",
+    "target": "ESNext",
+    "lib": ["ES2020", "dom"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node", "./types/*.d.ts"]
+  },
+  "exclude": ["node_modules", "dist"]
+}

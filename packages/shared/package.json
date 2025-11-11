@@ -1,0 +1,40 @@
+{
+  "name": "@near/soft-enclave-shared",
+  "version": "0.1.0",
+  "description": "Shared utilities for soft-enclave (crypto protocols, message types)",
+  "type": "module",
+  "types": "./dist/esm/index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "browser": "./dist/umd/browser.global.js",
+  "scripts": {
+    "build": "tsup",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.js"
+    }
+  },
+  "dependencies": {
+    "@hpke/core": "*",
+    "@hpke/dhkem-x25519": "*"
+  },
+  "devDependencies": {
+    "rimraf": "*",
+    "tsup": "*",
+    "typescript": "*"
+  },
+  "keywords": [
+    "soft-enclave",
+    "crypto",
+    "protocol"
+  ],
+  "author": "",
+  "license": "MIT"
+}

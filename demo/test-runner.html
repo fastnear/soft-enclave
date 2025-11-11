@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soft Enclave - Security Test Runner</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      color: #333;
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 16px;
+    }
+
+    .backend-selector {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+
+    .backend-selector label {
+      margin-right: 20px;
+      cursor: pointer;
+    }
+
+    .backend-selector input[type="radio"] {
+      margin-right: 5px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .test-card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      transition: all 0.3s;
+    }
+
+    .test-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    }
+
+    .test-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .test-number {
+      background: #667eea;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .test-status {
+      font-size: 32px;
+    }
+
+    .test-status.pending { opacity: 0.3; }
+    .test-status.running::after { content: '⏳'; }
+    .test-status.pass::after { content: '✅'; }
+    .test-status.fail::after { content: '❌'; }
+
+    .test-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .test-description {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+
+    .test-result {
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-top: 10px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .test-result.info {
+      background: #E3F2FD;
+      color: #1565C0;
+    }
+
+    .test-result.success {
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+
+    .test-result.error {
+      background: #FFEBEE;
+      color: #C62828;
+    }
+
+    .summary {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    .summary-score {
+      font-size: 48px;
+      font-weight: bold;
+      color: #667eea;
+      margin: 20px 0;
+    }
+
+    .warning-note {
+      background: #FFF3E0;
+      border-left: 4px solid #FF9800;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+
+    .warning-note strong {
+      color: #E65100;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .running {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔒 Soft Enclave Security Test Runner</h1>
+      <p class="subtitle">Visual validation of security properties across isolation backends</p>
+
+      <div class="backend-selector">
+        <strong>Select Backend:</strong><br>
+        <label>
+          <input type="radio" name="backend" value="worker" checked>
+          Worker Backend (Port 8081)
+        </label>
+        <label>
+          <input type="radio" name="backend" value="iframe">
+          iframe Backend (Port 8091)
+        </label>
+      </div>
+
+      <div class="controls">
+        <button id="runAllBtn">▶️ Run All Tests</button>
+        <button id="runSelectedBtn" disabled>▶️ Run Selected Test</button>
+        <button id="resetBtn">🔄 Reset</button>
+      </div>
+
+      <div class="warning-note">
+        <strong>⚠️ Prerequisites:</strong> Ensure the enclave server is running:
+        <br>• Worker: <code>npm run serve:enclave</code> (port 8081)
+        <br>• iframe: <code>npm run serve:iframe</code> (port 8091)
+      </div>
+    </header>
+
+    <div class="test-grid">
+      <!-- Test 1: Basic Execution -->
+      <div class="test-card" data-test="basic">
+        <div class="test-header">
+          <div class="test-number">1</div>
+          <div class="test-status pending"></div>
+        </div>
+        <div class="test-title">Basic Execution</div>
+        <div class="test-description">
+          Verifies enclave can initialize and execute simple code successfully.
+          Tests the complete handshake and encrypted RPC flow.
+        </div>
+        <div class="test-result" id="test1-result"></div>
+      </div>
+
+      <!-- Test 2: SOP Barrier (Worker only) -->
+      <div class="test-card" data-test="sop">
+        <div class="test-header">
+          <div class="test-number">2</div>
+          <div class="test-status pending"></div>
+        </div>
+        <div class="test-title">SOP Barrier (Worker)</div>
+        <div class="test-description">
+          Attempts to access cross-origin worker memory. Should fail with SecurityError,
+          proving Same-Origin Policy enforcement.
+        </div>
+        <div class="test-result" id="test2-result"></div>
+      </div>
+
+      <!-- Test 3: Replay Protection -->
+      <div class="test-card" data-test="replay">
+        <div class="test-header">
+          <div class="test-number">3</div>
+          <div class="test-status pending"></div>
+        </div>
+        <div class="test-title">Replay Protection</div>
+        <div class="test-description">
+          Captures an encrypted message and replays it. Enclave should detect
+          duplicate IV and reject with "replay-detected" error.
+        </div>
+        <div class="test-result" id="test3-result"></div>
+      </div>
+
+      <!-- Test 4: Context Binding -->
+      <div class="test-card" data-test="context">
+        <div class="test-header">
+          <div class="test-number">4</div>
+          <div class="test-status pending"></div>
+        </div>
+        <div class="test-title">Context Binding</div>
+        <div class="test-description">
+          Creates enclave with tampered codeHash. Session keys won't match,
+          causing decryption failure. Proves keys are bound to context.
+        </div>
+        <div class="test-result" id="test4-result"></div>
+      </div>
+    </div>
+
+    <div class="summary">
+      <h2>Test Summary</h2>
+      <div class="summary-score" id="summaryScore">0/4 Passed</div>
+      <div id="summaryMessage"></div>
+    </div>
+  </div>
+
+  <script type="module" src="./test-runner.js"></script>
+</body>
+</html>

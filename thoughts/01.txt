@@ -1,0 +1,137 @@
+Short answer
+  •  Yes: QuickJS compiled to Wasm has its own linear memory and cannot read/write outside it. That isolation is enforced by the browser’s Wasm sandbox with bounds checks/guard regions.  ￼
+  •  No (for confidentiality vs host JS): In the browser, whoever instantiates the module and can obtain the WebAssembly.Memory handle can read/write every byte of QuickJS’s heap. With Emscripten defaults the memory is exported to JS, so the host typically has that handle. This means QuickJS‑Wasm is not a “private enclave” against the embedding page.  ￼
+
+⸻
+
+What is isolated vs. what is not (in a browser)
+  •  Isolated
+Per‑instance memory safety: a Wasm instance (your QuickJS build) can’t address anything outside its linear memory; it can’t escape the sandbox or touch arbitrary process memory.  ￼
+  •  Not isolated (confidentiality)
+The embedding JS can usually get at the module’s memory (instance.exports.memory if exported, or the imported Memory object if you configured IMPORTED_MEMORY). Either way, any JS holding that handle can create typed‑array views and dump the heap. MDN and Emscripten’s settings docs describe this explicitly.  ￼
+  •  Developer tooling demonstrates the same point
+Chrome DevTools’ Memory Inspector can view WebAssembly.Memory directly—underscoring that Wasm’s model protects the user/host from modules, not modules from the host.  ￼
+
+⸻
+
+Minimal proof (host JS can siphon QuickJS memory)
+
+If the page is adversarial, it can hook instantiation and capture the memory:
+
+// Run this before any Wasm is instantiated on the page
+const _origInstantiate = WebAssembly.instantiate;
+WebAssembly.instantiate = async (bytes, imports) => {
+  const res = await _origInstantiate(bytes, imports);
+  if (res.instance?.exports?.memory instanceof WebAssembly.Memory) {
+    // Leak the memory handle; host can now read/write heap bytes
+    window.__leakedQuickJSMemory = res.instance.exports.memory;
+  }
+  return res;
+};
+
+// Later, anywhere on the page:
+const u8 = new Uint8Array(window.__leakedQuickJSMemory.buffer);
+console.log(u8.slice(0, 64)); // dumps first 64 bytes of the QuickJS heap
+
+This works when memory is exported (Emscripten default). If you import memory from JS instead, the handle is even more trivially available on the JS side.  ￼
+
+⸻
+
+What this implies for your PR’s “enclave” idea
+  •  QuickJS‑Wasm by itself is not a TEE. The standard WebAssembly security model aims to protect the platform from modules—not to give modules secrecy from the platform. “Non‑primitive data … must be passed through linear memory, which can be accessed by both” the host and the module. Treating a same‑origin, same‑process Wasm instance as a secrecy enclave against page JS does not hold.  ￼
+  •  What can provide practical secrecy vs page JS
+Put the QuickJS runtime in a cross‑origin worker or iframe you control, never expose its Memory, and talk only via postMessage with end‑to‑end encrypted payloads. Same‑origin policy then prevents the host page from obtaining the Memory reference at all—and if messages are ciphertext, observation doesn’t help. (This is still not a hardware TEE or remotely attestable, but it meaningfully raises the bar in‑browser.) Chrome’s cross‑origin‑isolation requirements around shared memory are related background, but the key property here is SOP.  ￼
+
+⸻
+
+Quick checks you can run against your build
+
+1) Does your QuickJS module expose memory?
+
+async function memoryIsExposed(fetchPromise) {
+  const bytes = await (await fetchPromise).arrayBuffer();
+  const { module, instance } = await WebAssembly.instantiate(bytes, {});
+  return !!(instance.exports && instance.exports.memory);
+}
+// usage:
+// memoryIsExposed(fetch('quickjs.wasm')).then(console.log) // true/false
+
+If true, host JS can trivially read/write heap bytes via instance.exports.memory. With Emscripten, that’s the default.  ￼
+
+2) Build‑time signals (Emscripten)
+  •  Default behavior: “the wasm module defines the memory and exports it to JavaScript.”
+  •  You can flip to imported memory with -sIMPORTED_MEMORY=1, but that does not create confidentiality; it just changes who creates the Memory object.  ￼
+
+⸻
+
+Bottom line
+  •  Memory safety: ✔️ (QuickJS‑Wasm is memory‑safe and isolated from the rest of the process)
+  •  Memory confidentiality from the embedding page: ❌ (Host JS that can get the Memory handle—commonly available—can read/write QuickJS’s heap)
+  •  If you need secrecy vs page JS: put QuickJS in a cross‑origin worker/iframe you control and exchange only ciphertext. Otherwise, do not treat QuickJS‑Wasm as a secrecy enclave.
+
+References: WebAssembly security overview; MDN WebAssembly.Memory; Emscripten memory settings; Bytecode Alliance on sandboxing; USENIX’20 on host/Wasm memory sharing; Chrome DevTools Memory Inspector.  ￼
+
+Context: Your PR frames L3 as QuickJS and L4 as a “Frozen Realm” that decrypts only inside L4. If L4 runs in the same origin as the host page, memory confidentiality does not follow from Wasm isolation alone. Consider shifting L3/L4 into a cross‑origin worker boundary and keep all host↔guest payloads encrypted, per the above.  ￼
+
+---
+
+Me: are you positive of this:
+
+```
+  •  Memory confidentiality from the embedding page: ❌ (Host JS that can get the Memory handle—commonly available—can read/write QuickJS’s heap)
+```
+
+It's great to know if it's true, but this has escaped a few eyes if so.
+
+---
+
+Yes. Positive.
+
+Why this is true (and common):
+  •  The WebAssembly JS API makes a module’s linear memory a WebAssembly.Memory whose .buffer is an ArrayBuffer. If page JS ever obtains that Memory, it can create typed views and read/write arbitrary heap bytes. That’s the API contract.  ￼
+  •  With Emscripten, the default is: “the wasm module defines the memory and exports it to JavaScript.” So page JS typically has the handle by design. Importing memory instead (-sIMPORTED_MEMORY=1) also gives the handle to JS—just earlier.  ￼
+  •  The quickjs-emscripten library explicitly exposes the handle: since v0.27 it added mod.getWasmMemory() (and an option to supply one). That makes the WebAssembly.Memory “commonly available” in QuickJS-in-Wasm setups using that package.  ￼
+  •  Tooling demonstrates the same: Chrome DevTools’ Memory Inspector can open a WebAssembly.Memory and inspect bytes—because it’s just an ArrayBuffer from JS’ perspective.  ￼
+  •  The WebAssembly security model sandboxes modules to protect the host; it does not promise confidentiality of module memory from the embedding JS.  ￼
+
+Minimal proofs you can run:
+
+A) With quickjs-emscripten ≥ v0.27
+
+import { newQuickJSWASMModule, RELEASE_SYNC } from "quickjs-emscripten";
+
+const mod = await newQuickJSWASMModule(RELEASE_SYNC);
+const mem = mod.getWasmMemory();                 // <-- public API
+const heap = new Uint8Array(mem.buffer);
+
+console.log(heap.slice(0, 64));                  // read
+heap[0] = 0x41;                                  // write
+
+The changelog documents getWasmMemory() explicitly.  ￼
+
+B) Generic interception (any Emscripten default build that exports memory)
+
+// Install before any Wasm instantiation on the page:
+const origInstantiate = WebAssembly.instantiate;
+WebAssembly.instantiate = async (bytes, imports) => {
+  const res = await origInstantiate(bytes, imports);
+  const mem = res?.instance?.exports?.memory;
+  if (mem instanceof WebAssembly.Memory) {
+    window.__leakedMem = mem; // host now owns the heap
+  }
+  return res;
+};
+
+// Later:
+const u8 = new Uint8Array(window.__leakedMem.buffer);
+console.log(u8.subarray(0, 64));                 // dump bytes
+
+This works because exported memory is a standard WebAssembly.Memory object JS can view/edit.  ￼
+
+Nuance (when you don’t hand JS a handle):
+
+If a module neither imports nor exports its memory and never lets a view to memory.buffer escape to JS, then page JS cannot directly read the heap (it lacks a WebAssembly.Memory). That’s consistent with the spec/docs: JS access happens via import or export. But quickjs-emscripten and typical Emscripten glue expose memory intentionally for interop and are thus not confidential by default.  ￼
+
+Bottom line:
+In-browser QuickJS→Wasm does not provide memory confidentiality from the embedding page if the page can obtain the WebAssembly.Memory handle—and with Emscripten/quickjs‑emscripten that handle is ordinarily exposed. Treat Wasm as an integrity/safety sandbox for the host, not a secrecy enclave from the host.  ￼
+
