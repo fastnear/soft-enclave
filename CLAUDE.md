@@ -61,7 +61,7 @@ These metrics are exposed to users and logged.
 - **Location**: `src/backends/iframe/`
 - **Isolation**: Cross-origin iframe + MessageChannel
 - **Protocol**: Simple ECDH+HKDF
-- **Entry**: Port 8091 (npm run serve:iframe)
+- **Entry**: Port 8081 (npm run serve:iframe)
 - **Features**: Explicit egress guard, easier debugging
 - **Best for**: Development, security demos, visual validation
 
@@ -70,7 +70,7 @@ These metrics are exposed to users and logged.
 Both backends use the same interface via `createEnclave()`:
 
 ```javascript
-import { createEnclave, EnclaveMode } from '@near/soft-enclave';
+import { createEnclave, EnclaveMode } from '@fastnear/soft-enclave';
 
 // Worker backend (default)
 const enclave = createEnclave();
@@ -78,7 +78,7 @@ const enclave = createEnclave();
 // iframe backend
 const enclave = createEnclave({
   mode: EnclaveMode.IFRAME,
-  enclaveOrigin: 'http://localhost:8091'
+  enclaveOrigin: 'http://localhost:8081'
 });
 
 // Both have same API:
@@ -242,10 +242,13 @@ npm run serve:enclave    # Terminal 2: Worker (localhost:8081)
 
 # Development - iframe Backend (requires 2 terminals)
 npm run dev              # Terminal 1: Host app (localhost:3000)
-npm run serve:iframe     # Terminal 2: iframe enclave (localhost:8091)
+npm run serve:iframe     # Terminal 2: iframe enclave (localhost:8081)
 
 # Testing
 npm test                 # Run all tests
+npm run test:ci          # CI test suite (excludes experimental)
+npm run test:security    # Security-focused tests only
+RUN_HPKE=1 npm test      # Include experimental HPKE tests
 
 # Build
 npm run build           # Build for production
@@ -340,6 +343,37 @@ Verify security properties:
 - Memory zeroing
 
 **Note:** Some tests require a running worker and are skipped by default.
+
+### Test Infrastructure
+
+**Scoped Console Filtering** (`test/helpers/console.ts`):
+- `muteConsoleErrors(patterns)` - Filters expected error patterns without masking real errors
+- `muteConsoleWarns(patterns)` - Filters expected warning patterns
+- Uses Vitest's `vi.spyOn()` for proper scoped mocking
+- Avoids global console reassignment
+- Preserves unexpected errors for debugging
+
+```javascript
+import { muteConsoleErrors } from './helpers/console';
+
+beforeAll(() => {
+  const restore = muteConsoleErrors([
+    /expected pattern/i,
+    'literal string to match'
+  ]);
+  // restore() when done
+});
+```
+
+**Experimental Tests Gated**:
+- HPKE protocol tests run only with `RUN_HPKE=1` environment variable
+- Keeps CI output clean while preserving experimental work
+- Run experimental tests: `RUN_HPKE=1 npm test test/hpke-protocol.test.js`
+
+**Expected Errors**:
+- Primordial freezing errors (`Cannot assign to read only property 'constructor'`) are expected
+- Handled in `test/setup.js` and `vitest.config.js`
+- Non-blocking, all tests pass despite these harmless errors
 
 ## Common Development Tasks
 
@@ -479,6 +513,35 @@ When reviewing PRs:
 - [ ] Is memory explicitly zeroed after sensitive operations?
 - [ ] Does it avoid overclaiming security properties?
 - [ ] Are limitations documented alongside features?
+
+## Original Research Context
+
+This project emerged from research analyzing WebAssembly memory isolation and security properties, particularly concerning QuickJS compiled to Wasm and whether it could serve as a "secure enclave" against the embedding page.
+
+### Key Research Findings (from thoughts/01.txt)
+
+1. **Memory Safety**: QuickJS-Wasm is memory-safe and isolated from the rest of the process (sandboxed by Wasm)
+2. **Memory Confidentiality**: QuickJS-Wasm does NOT provide memory confidentiality from the embedding page by default
+   - The host JavaScript can access the WebAssembly.Memory handle (via exports or imports)
+   - With Emscripten defaults, memory is exported to JS
+   - The quickjs-emscripten library exposes `mod.getWasmMemory()` API
+3. **Security Model**: WebAssembly sandboxes modules to protect the host from modules, NOT to protect modules from the host
+
+### Architecture Evolution
+
+The research originally referenced a multi-layer architecture:
+- L3: QuickJS layer
+- L4: "Frozen Realm" that decrypts content
+
+The analysis concluded that if L3/L4 runs in the same origin as the host page, memory confidentiality does not follow from Wasm isolation alone. This led to the current implementation using cross-origin worker/iframe boundaries with encrypted host↔guest payloads.
+
+### Key Technical Learnings
+
+- **WebAssembly.Memory**: The linear memory API exposes heap as ArrayBuffer to JavaScript
+- **Emscripten Memory Modes**: Default exports memory; `-sIMPORTED_MEMORY=1` changes who creates Memory but doesn't add confidentiality
+- **Cross-Origin Isolation**: The effective mitigation implemented in this project
+
+These findings directly influenced the defense-in-depth approach taken in this implementation.
 
 ## References
 
