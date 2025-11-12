@@ -221,6 +221,14 @@ async function handleRequest(req, res) {
       // Allow other vendor files from node_modules
       filePath = join(__dirname, 'node_modules/quickjs-emscripten/dist/', vendorFile);
     }
+  } else if (req.url.startsWith('/shared/')) {
+    // Shared package files - serve from built dist/esm
+    const relativePath = req.url.replace('/shared/src/', '');
+    filePath = join(__dirname, 'packages/shared/dist/esm', relativePath);
+  } else if (req.url.startsWith('/near/')) {
+    // NEAR package files - serve from built dist/esm
+    const relativePath = req.url.replace('/near/src/', '');
+    filePath = join(__dirname, 'packages/near/dist/esm', relativePath);
   } else if (req.url.startsWith('/packages/')) {
     // iframe backend files
     filePath = join(__dirname, req.url);
