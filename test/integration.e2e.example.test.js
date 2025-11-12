@@ -2,7 +2,7 @@
 import { describe as _describe, it, expect, beforeAll, afterAll } from 'vitest';
 const describe = (process.env.RUN_E2E === '1' ? _describe : _describe.skip);
 
-import { HybridSecureEnclave } from '../src/host/hybrid-enclave.js';
+import { createEnclave } from '@fastnear/soft-enclave';
 
 describe('End-to-End Integration: Context-Bound Sessions + AAD', () => {
   let enclave;

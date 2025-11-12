@@ -9,7 +9,7 @@
     "types": ["node"],
     "lib": ["ES2020", "WebWorker"],
     "paths": {
-      "@near/*": ["../*/src"]
+      "@fastnear/*": ["../*/src"]
     }
   },
   "include": ["src/**/*"],

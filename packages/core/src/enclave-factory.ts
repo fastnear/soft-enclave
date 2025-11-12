@@ -21,8 +21,8 @@
 import type { EnclaveBase } from './enclave-base.js';
 
 // Circular dependency - import directly from packages instead
-// import { WorkerBackend } from '@near/soft-enclave-worker';
-// import { IframeBackend } from '@near/soft-enclave-iframe';
+// import { WorkerBackend } from '@fastnear/soft-enclave-worker';
+// import { IframeBackend } from '@fastnear/soft-enclave-iframe';
 
 /**
  * Available backend modes
@@ -141,12 +141,12 @@ export function createEnclave(options: any = {}): Promise<EnclaveBase> {
     case EnclaveMode.WORKER:
       // Dynamic import to avoid circular dependency during build
       // @ts-ignore - Worker package may not be built yet
-      return import('@near/soft-enclave-worker').then(m => new m.WorkerBackend(config));
+      return import('@fastnear/soft-enclave-worker').then(m => new m.WorkerBackend(config));
 
     case EnclaveMode.IFRAME:
       // Dynamic import to avoid circular dependency during build
       // @ts-ignore - iframe package may not be built yet
-      return import('@near/soft-enclave-iframe').then(m => new m.IframeBackend(config));
+      return import('@fastnear/soft-enclave-iframe').then(m => new m.IframeBackend(config));
 
     default:
       throw new Error(`Unsupported mode: ${mode}`);
@@ -160,7 +160,7 @@ export function createEnclave(options: any = {}): Promise<EnclaveBase> {
  * the HybridSecureEnclave class directly.
  *
  * Note: Removed to avoid circular dependency. Import WorkerBackend directly from
- * @near/soft-enclave-worker if needed.
+ * @fastnear/soft-enclave-worker if needed.
  */
 // export { WorkerBackend as HybridSecureEnclave };
 

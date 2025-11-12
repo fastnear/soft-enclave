@@ -1,6 +1,6 @@
 # Definition of Done: Production Security Checklist
 
-**Project**: @near/soft-enclave
+**Project**: @fastnear/soft-enclave
 **Version**: 0.1.0
 **Last Updated**: 2025-11-06
 **Status**: ✅ Phase 1 Complete | 🚧 Phase 2 In Progress

@@ -9,7 +9,7 @@ module.exports = {
 
     // Sync all workspace versions with root
     for (const workspace of Yarn.workspaces()) {
-      if (!workspace.ident.startsWith('@near/soft-enclave')) {
+      if (!workspace.ident.startsWith('@fastnear/soft-enclave')) {
         continue
       }
       workspace.set('version', rootVersion)

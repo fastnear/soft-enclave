@@ -16,7 +16,7 @@
  * - AAD for message authentication
  */
 
-import { EnclaveBase } from '@near/soft-enclave-core';
+import { EnclaveBase } from '@fastnear/soft-enclave-core';
 
 import {
   generateNonExtractableKey,
@@ -30,19 +30,19 @@ import {
   deserializePayload,
   sha256,
   encodeUtf8,
-  deriveSessionWithContext,
+  deriveSession,
   encryptWithSequence,
   decryptWithSequence,
   seal,  // v1.1 API
   open   // v1.1 API
-} from '@near/soft-enclave-shared';
+} from '@fastnear/soft-enclave-shared';
 
 import {
   MessageType,
   AAD,
   createMessage,
   generateMessageId
-} from '@near/soft-enclave-shared';
+} from '@fastnear/soft-enclave-shared';
 
 /**
  * Worker-based secure enclave backend
@@ -163,7 +163,7 @@ export class WorkerBackend extends EnclaveBase {
       codeHash: codeHashHex
     };
 
-    const session = await deriveSessionWithContext({
+    const session = await deriveSession({
       privateKey: keyPair.privateKey,
       peerPublicKey: workerPublicKey,
       selfPublicKeyRaw: publicKeyData, // Transcript binding (v1.1)

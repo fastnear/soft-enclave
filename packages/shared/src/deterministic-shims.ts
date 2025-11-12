@@ -101,7 +101,7 @@ function createDeterministicDate(fixedTime) {
  * This is a subset of what SES does - for full hardening, use SES.
  */
 function freezePrimordials() {
-  const { freeze } = Object;
+  const { freeze, isFrozen } = Object;
 
   const primordials = [
     Object,
@@ -122,20 +122,43 @@ function freezePrimordials() {
   ];
 
   for (const ctor of primordials) {
-    try {
-      freeze(ctor);
-      if (ctor.prototype) {
-        freeze(ctor.prototype);
+    // Only freeze if not already frozen
+    if (!isFrozen(ctor)) {
+      try {
+        freeze(ctor);
+      } catch (e) {
+        // Some environments may not allow freezing constructors
+        // Suppress expected errors (read-only properties, already frozen, etc.)
       }
-    } catch (e) {
-      // Some environments may not allow freezing
-      console.warn(`[Determinism] Could not freeze ${ctor.name}:`, e.message);
+    }
+
+    // Only freeze prototype if it exists and isn't already frozen
+    if (ctor.prototype && !isFrozen(ctor.prototype)) {
+      try {
+        freeze(ctor.prototype);
+      } catch (e) {
+        // Some environments may not allow freezing prototypes
+        // Suppress expected errors (read-only properties, cyclic proto, etc.)
+      }
     }
   }
 
-  // Freeze Math and JSON
-  freeze(Math);
-  freeze(JSON);
+  // Freeze Math and JSON (best effort)
+  if (!isFrozen(Math)) {
+    try {
+      freeze(Math);
+    } catch (e) {
+      // Already frozen or environment prevents it
+    }
+  }
+
+  if (!isFrozen(JSON)) {
+    try {
+      freeze(JSON);
+    } catch (e) {
+      // Already frozen or environment prevents it
+    }
+  }
 
   console.log('[Determinism] Primordials frozen');
 }

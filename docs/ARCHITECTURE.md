@@ -94,7 +94,7 @@ This project supports **two isolation backends**, both implementing Tier 2 secur
             │ MessageChannel (encrypted)
             ↓
 ┌─────────────────────────────────────────┐
-│ iframe (http://localhost:8091)           │
+│ iframe (http://localhost:8081)           │
 │  ┌────────────────────────────────────┐ │
 │  │ Egress Guard (LOADED FIRST)         │ │
 │  │  - Blocks plaintext messages        │ │
@@ -192,7 +192,7 @@ Legend: ✓✓✓ strong, ✓✓ moderate, ✓ limited, ~ marginal
 ### Basic Usage (Worker Backend - Default)
 
 ```javascript
-import { createEnclave } from '@near/soft-enclave';
+import { createEnclave } from '@fastnear/soft-enclave';
 
 // Create with default settings (worker + advanced protocol)
 const enclave = createEnclave();
@@ -210,12 +210,12 @@ console.log('Key exposure:', metrics.averageKeyExposureMs, 'ms');
 ### iframe Backend
 
 ```javascript
-import { createEnclave, EnclaveMode } from '@near/soft-enclave';
+import { createEnclave, EnclaveMode } from '@fastnear/soft-enclave';
 
 // Create iframe backend
 const enclave = createEnclave({
   mode: EnclaveMode.IFRAME,
-  enclaveOrigin: 'http://localhost:8091'
+  enclaveOrigin: 'http://localhost:8081'
 });
 
 await enclave.initialize();
@@ -225,7 +225,7 @@ const { result } = await enclave.execute('fibonacci(10)');
 ### Security Tier Selection
 
 ```javascript
-import { createEnclave, recommendTier } from '@near/soft-enclave';
+import { createEnclave, recommendTier } from '@fastnear/soft-enclave';
 
 // Automatic tier selection based on transaction value
 const transactionValue = 5000; // $5K USD
@@ -301,7 +301,7 @@ npm run serve:enclave # http://localhost:8081
 npm run dev           # http://localhost:3000
 
 # Terminal 2: iframe enclave
-npm run serve:iframe  # http://localhost:8091
+npm run serve:iframe  # http://localhost:8081
 ```
 
 ### Testing

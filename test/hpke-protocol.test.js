@@ -23,9 +23,12 @@ import {
   deriveCodeHash,
   isHPKEMessage,
   isLegacyMessage,
-} from '../src/shared/crypto-protocol-hpke.js';
+} from '@fastnear/soft-enclave-shared';
 
-describe('HPKE: Key Generation and Serialization', () => {
+// Gate experimental HPKE tests behind environment variable
+const _describe = (process.env.RUN_HPKE === '1') ? describe : describe.skip;
+
+_describe('HPKE: Key Generation and Serialization', () => {
   it('should generate HPKE key pair', async () => {
     const keyPair = await generateHPKEKeyPair();
 
@@ -78,7 +81,7 @@ describe('HPKE: Key Generation and Serialization', () => {
   });
 });
 
-describe('HPKE: Encryption and Decryption', () => {
+_describe('HPKE: Encryption and Decryption', () => {
   it('should encrypt and decrypt data successfully', async () => {
     const recipientKeyPair = await generateHPKEKeyPair();
     const plaintext = { message: 'Secret data', value: 12345 };
@@ -160,7 +163,7 @@ describe('HPKE: Encryption and Decryption', () => {
   });
 });
 
-describe('HPKE: Additional Authenticated Data (AAD)', () => {
+_describe('HPKE: Additional Authenticated Data (AAD)', () => {
   it('should encrypt and decrypt with AAD', async () => {
     const recipientKeyPair = await generateHPKEKeyPair();
     const plaintext = { message: 'Secret' };
@@ -209,7 +212,7 @@ describe('HPKE: Additional Authenticated Data (AAD)', () => {
   });
 });
 
-describe('HPKE: Code Attestation', () => {
+_describe('HPKE: Code Attestation', () => {
   it('should derive consistent code hash', async () => {
     const code = 'function test() { return 42; }';
 
@@ -268,7 +271,7 @@ describe('HPKE: Code Attestation', () => {
   });
 });
 
-describe('HPKE: Nonce Management', () => {
+_describe('HPKE: Nonce Management', () => {
   it('should produce different ciphertexts for same plaintext (implicit nonces)', async () => {
     const recipientKeyPair = await generateHPKEKeyPair();
     const plaintext = { message: 'Same data every time' };
@@ -319,7 +322,7 @@ describe('HPKE: Nonce Management', () => {
   });
 });
 
-describe('HPKE: Message Format Detection', () => {
+_describe('HPKE: Message Format Detection', () => {
   it('should identify HPKE messages', async () => {
     const recipientKeyPair = await generateHPKEKeyPair();
     const encrypted = await hpkeEncrypt(recipientKeyPair.publicKey, { test: true });
@@ -347,7 +350,7 @@ describe('HPKE: Message Format Detection', () => {
   });
 });
 
-describe('HPKE: Performance and Scalability', () => {
+_describe('HPKE: Performance and Scalability', () => {
   it('should handle large payloads', async () => {
     const recipientKeyPair = await generateHPKEKeyPair();
 

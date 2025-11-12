@@ -7,7 +7,7 @@
     "resolveJsonModule": true,
     "types": ["node"],
     "paths": {
-      "@near/*": ["../*/src"]
+      "@fastnear/*": ["../*/src"]
     }
   },
   "include": ["src/**/*"],

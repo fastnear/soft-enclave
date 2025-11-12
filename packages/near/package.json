@@ -1,5 +1,5 @@
 {
-  "name": "@near/soft-enclave-near",
+  "name": "@fastnear/soft-enclave-near",
   "version": "0.1.0",
   "description": "NEAR Protocol adapter for soft-enclave",
   "type": "module",
@@ -30,10 +30,10 @@
     }
   },
   "dependencies": {
-    "@near/soft-enclave-core": "workspace:*",
-    "@near/soft-enclave-shared": "workspace:*",
-    "borsh": "^2.0.0",
-    "tweetnacl": "^1.0.3"
+    "@fastnear/soft-enclave-core": "workspace:*",
+    "@fastnear/soft-enclave-shared": "workspace:*",
+    "borsh": "*",
+    "tweetnacl": "*"
   },
   "devDependencies": {
     "rimraf": "*",
@@ -45,6 +45,11 @@
     "near",
     "adapter"
   ],
-  "author": "",
+  "author": "FastNEAR",
+  "homepage": "https://github.com/fastnear/soft-enclave",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fastnear/soft-enclave.git"
+  },
   "license": "MIT"
 }

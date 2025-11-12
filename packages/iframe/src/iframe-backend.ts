@@ -17,7 +17,7 @@
  * - IV replay protection in enclave
  */
 
-import { EnclaveBase } from '@near/soft-enclave-core';
+import { EnclaveBase } from '@fastnear/soft-enclave-core';
 
 /**
  * iframe-based secure enclave backend

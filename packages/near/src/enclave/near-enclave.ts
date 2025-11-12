@@ -20,7 +20,9 @@ function toBase64(u8: Uint8Array): string {
 
 export function makeViewFunctionRequest(v: ViewCall) {
   const id = v.id ?? Math.random().toString(36).slice(2);
-  const args_bytes = v.args ? new TextEncoder().encode(JSON.stringify(v.args)) : new Uint8Array();
+  // Handle empty object as no args
+  const hasArgs = v.args && Object.keys(v.args).length > 0;
+  const args_bytes = hasArgs ? new TextEncoder().encode(JSON.stringify(v.args)) : new Uint8Array();
   const args_base64 = args_bytes.length ? toBase64(args_bytes) : "";
   const req = { jsonrpc: "2.0" as const, id, method: "query", params: { request_type: "call_function", account_id: v.contractId, method_name: v.methodName, args_base64, finality: v.finality ?? "optimistic" } };
   return { url: v.rpcUrl, req };

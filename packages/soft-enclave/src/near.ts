@@ -1,2 +1,2 @@
 // NEAR integration exports
-export * from '@near/soft-enclave-near'
+export * from '@fastnear/soft-enclave-near'

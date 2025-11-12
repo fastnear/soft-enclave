@@ -9,7 +9,7 @@ import {
   encodePublicKey,
   derivePublicKey,
   parsePrivateKey
-} from '@near/soft-enclave-near';
+} from '@fastnear/soft-enclave-near';
 
 const expectedParent = (window as any).PARENT_ORIGIN ?? 'http://localhost:5173';
 

@@ -2,7 +2,7 @@
  * Demo application for NEAR WASM Enclave
  */
 
-import { HybridSecureEnclave } from '../src/host/hybrid-enclave.js';
+import { createEnclave } from '@fastnear/soft-enclave';
 
 class Demo {
   constructor() {
@@ -47,8 +47,10 @@ class Demo {
       statusEl.className = 'status pending';
       statusEl.innerHTML = '<div class="spinner"></div><div>Initializing enclave...</div>';
 
-      // Create enclave with local worker URL for demo
-      this.enclave = new HybridSecureEnclave('http://localhost:8081/enclave-worker.js');
+      // Create enclave with worker backend
+      this.enclave = await createEnclave({
+        workerUrl: 'http://localhost:8081/enclave-worker.js'
+      });
 
       await this.enclave.initialize();
 
@@ -64,7 +66,18 @@ class Demo {
     } catch (error) {
       console.error('Initialization error:', error);
       statusEl.className = 'status error';
-      statusEl.innerHTML = `<div>✗ Error: ${error.message}</div>`;
+
+      let errorMessage = error.message;
+
+      // Check if error is caused by browser extension
+      if (error.stack && error.stack.includes('contentScripts.bundle.js')) {
+        errorMessage = 'Browser extension is interfering with WebAssembly. Please try: <br>' +
+          '1. Disable browser extensions (especially ad blockers)<br>' +
+          '2. Use an incognito/private window<br>' +
+          '3. Try a different browser';
+      }
+
+      statusEl.innerHTML = `<div>✗ Error: ${errorMessage}</div>`;
       btnEl.disabled = false;
     }
   }

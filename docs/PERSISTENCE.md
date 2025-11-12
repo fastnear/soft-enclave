@@ -211,7 +211,7 @@ const wrappedKey = await db.get('keys', accountId);
 **API:**
 
 ```typescript
-import { Keystore, getKeystore } from '@near/soft-enclave/shared';
+import { Keystore, getKeystore } from '@fastnear/soft-enclave/shared';
 
 // Initialize
 const keystore = await getKeystore();
@@ -274,7 +274,7 @@ const avgExposure = keystore.getAverageKeyExposure(); // ms
 **API:**
 
 ```typescript
-import { EncryptedStorage, getStorage } from '@near/soft-enclave/shared';
+import { EncryptedStorage, getStorage } from '@fastnear/soft-enclave/shared';
 
 // Initialize
 const storage = await getStorage();
@@ -306,8 +306,8 @@ const stats = await storage.getStats();
 ### Pattern 1: Key Management
 
 ```typescript
-import { getKeystore } from '@near/soft-enclave/shared';
-import { parsePrivateKey, derivePublicKey, encodePublicKey } from '@near/soft-enclave/near';
+import { getKeystore } from '@fastnear/soft-enclave/shared';
+import { parsePrivateKey, derivePublicKey, encodePublicKey } from '@fastnear/soft-enclave/near';
 
 const keystore = await getKeystore();
 
@@ -331,7 +331,7 @@ console.log(`Average key exposure: ${avgExposure.toFixed(2)}ms`);
 ### Pattern 2: Application State Persistence
 
 ```typescript
-import { getStorage } from '@near/soft-enclave/shared';
+import { getStorage } from '@fastnear/soft-enclave/shared';
 
 const storage = await getStorage();
 

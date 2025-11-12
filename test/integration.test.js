@@ -12,7 +12,7 @@
  */
 
 import { describe as _describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { HybridSecureEnclave } from '../src/host/hybrid-enclave.js';
+import { createEnclave } from '@fastnear/soft-enclave';
 
 // Only run when RUN_E2E=1 to avoid CI flakes
 const describe = (process.env.RUN_E2E === '1' ? _describe : _describe.skip);
@@ -31,7 +31,9 @@ describe('End-to-End Integration: Context-Bound Sessions + AAD', () => {
   });
 
   it('should establish context-bound session with code hash', async () => {
-    enclave = new HybridSecureEnclave('http://localhost:8081/enclave-worker.js');
+    enclave = await createEnclave({
+      workerUrl: 'http://localhost:8081/enclave-worker.js'
+    });
 
     await enclave.initialize();
 
@@ -146,7 +148,9 @@ describe('End-to-End Integration: Context-Bound Sessions + AAD', () => {
 
   it('should have different session keys for different contexts', async () => {
     // Create a second enclave instance (same worker URL)
-    const enclave2 = new HybridSecureEnclave('http://localhost:8081/enclave-worker.js');
+    const enclave2 = await createEnclave({
+      workerUrl: 'http://localhost:8081/enclave-worker.js'
+    });
 
     try {
       await enclave2.initialize();
@@ -288,9 +292,9 @@ describe('Security Properties: AAD and Context Binding', () => {
 
     const baseIV = new Uint8Array(12).fill(0x42);
 
-    // Generate IVs for sequence 0-9
+    // Generate IVs for sequence 1-10
     const ivs = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 1; i <= 10; i++) {
       const iv = ivFromSequence(baseIV, i);
       ivs.push(iv);
     }
@@ -300,17 +304,17 @@ describe('Security Properties: AAD and Context Binding', () => {
     expect(ivSet.size).toBe(10);
 
     // Same sequence number should produce same IV (deterministic)
-    const iv0a = ivFromSequence(baseIV, 0);
-    const iv0b = ivFromSequence(baseIV, 0);
-    expect(iv0a).toEqual(iv0b);
+    const iv1a = ivFromSequence(baseIV, 1);
+    const iv1b = ivFromSequence(baseIV, 1);
+    expect(iv1a).toEqual(iv1b);
 
     // Different sequences should produce different IVs
-    const iv1 = ivFromSequence(baseIV, 1);
-    expect(iv0a).not.toEqual(iv1);
+    const iv2 = ivFromSequence(baseIV, 2);
+    expect(iv1a).not.toEqual(iv2);
 
     console.log('[Security Test] ✓ Counter-based IVs are deterministic and unique');
     console.log(`[Security Test]   Base IV: ${Array.from(baseIV).map(b => b.toString(16).padStart(2, '0')).join('')}`);
-    console.log(`[Security Test]   IV(0): ${Array.from(iv0a).map(b => b.toString(16).padStart(2, '0')).join('')}`);
-    console.log(`[Security Test]   IV(1): ${Array.from(iv1).map(b => b.toString(16).padStart(2, '0')).join('')}`);
+    console.log(`[Security Test]   IV(1): ${Array.from(iv1a).map(b => b.toString(16).padStart(2, '0')).join('')}`);
+    console.log(`[Security Test]   IV(2): ${Array.from(iv2).map(b => b.toString(16).padStart(2, '0')).join('')}`);
   });
 });

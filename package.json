@@ -1,5 +1,5 @@
 {
-  "name": "@near/soft-enclave-monorepo",
+  "name": "@fastnear/soft-enclave-monorepo",
   "version": "0.1.0",
   "description": "Browser-based soft enclave using QuickJS-WASM with cross-origin isolation and encrypted communication",
   "private": true,
@@ -16,6 +16,8 @@
     "dev:iframe": "node scripts/dev-iframe.mjs",
     "preview": "vite preview",
     "test": "vitest",
+    "test:ci": "vitest run --reporter=default",
+    "test:e2e": "RUN_E2E=1 vitest run test/integration.test.js",
     "test:security": "vitest run test/red-team.test.js test/nonce-uniqueness.test.js test/deterministic-shims.test.js",
     "test:hpke": "vitest run test/hpke-protocol.test.js",
     "test:determinism": "vitest run test/deterministic-shims.test.js",
@@ -34,6 +36,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "happy-dom": "^20.0.10",
+    "patch-package": "^8.0.1",
     "rimraf": "^6.0.1",
     "tsup": "^8.3.6",
     "typescript": "^5.7.2",
@@ -49,7 +53,12 @@
     "near",
     "web-crypto"
   ],
-  "author": "",
+  "author": "FastNEAR",
+  "homepage": "https://github.com/fastnear/soft-enclave",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fastnear/soft-enclave.git"
+  },
   "license": "MIT",
   "packageManager": "yarn@4.6.0"
 }

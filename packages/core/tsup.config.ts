@@ -15,7 +15,7 @@ export default defineConfig([
     dts: false,  // Only ESM build generates DTS
     sourcemap: true,
     minify: false,
-    external: ['@near/soft-enclave-worker', '@near/soft-enclave-iframe'],
+    external: ['@fastnear/soft-enclave-worker', '@fastnear/soft-enclave-iframe'],
     banner: {
       js: `/* Soft Enclave Core - CJS (${pkg.name} v${pkg.version}) */`,
     },
@@ -34,7 +34,7 @@ export default defineConfig([
     dts: true,  // Generate DTS for all entry files
     sourcemap: true,
     minify: false,
-    external: ['@near/soft-enclave-worker', '@near/soft-enclave-iframe'],
+    external: ['@fastnear/soft-enclave-worker', '@fastnear/soft-enclave-iframe'],
     banner: {
       js: `/* Soft Enclave Core - ESM (${pkg.name} v${pkg.version}) */`,
     },

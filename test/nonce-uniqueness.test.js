@@ -21,7 +21,7 @@ import {
   generateNonExtractableKey,
   encrypt,
   decrypt
-} from '../src/shared/crypto-protocol.js';
+} from '@fastnear/soft-enclave-shared';
 
 describe('Nonce Uniqueness: Property Tests', () => {
   it('should never reuse IVs across 10,000 encryptions', async () => {

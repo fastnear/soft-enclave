@@ -20,19 +20,19 @@ import {
   deserializePayload,
   sha256,
   encodeUtf8,
-  deriveSessionWithContext,
+  deriveSession,
   encryptWithSequence,
   decryptWithSequence,
   seal,  // v1.1 API
   open   // v1.1 API
-} from '@near/soft-enclave-shared';
+} from '@fastnear/soft-enclave-shared';
 
 import {
   MessageType,
   AAD,
   createMessage,
   generateMessageId
-} from '@near/soft-enclave-shared';
+} from '@fastnear/soft-enclave-shared';
 
 /**
  * Hybrid secure enclave client
@@ -147,7 +147,7 @@ export class HybridSecureEnclave {
       codeHash: codeHashHex
     };
 
-    const session = await deriveSessionWithContext({
+    const session = await deriveSession({
       privateKey: keyPair.privateKey,
       peerPublicKey: workerPublicKey,
       selfPublicKeyRaw: publicKeyData, // Transcript binding (v1.1)

@@ -20,7 +20,6 @@ describe('Egress Guard - HTTPS & Fallback', () => {
       requireHttps: true
     });
     const req: JsonRpcRequest = { jsonrpc: '2.0', id: 1, method: 'query', params: {} };
-
     const resp = { ok: true, body: null, text: async () => JSON.stringify({ jsonrpc:'2.0', id:1, result:{ ok:true } }) } as any;
     const spy = vi.spyOn(globalThis, 'fetch' as any).mockResolvedValue(resp);
     const out = await guard.post('http://localhost:1234', req);
@@ -34,17 +33,15 @@ describe('Egress Guard - HTTPS & Fallback', () => {
       allowMethods: ['send_tx', 'broadcast_tx_commit'],
       requireHttps: false
     });
-
     const reqSendTx: JsonRpcRequest = {
       jsonrpc: '2.0', id: 42, method: 'send_tx', params: { signed_tx_base64: 'AAAA' }
     };
-
     const errResp = { ok: false, body: null, text: async () => JSON.stringify({ error: { code: -32601, message: 'Method not found' } }) } as any;
     const okResp  = { ok: true,  body: null, text: async () => JSON.stringify({ jsonrpc:'2.0', id:42, result:{ status: 'Completed' } }) } as any;
 
     const spy = vi.spyOn(globalThis, 'fetch' as any)
-      .mockResolvedValueOnce(errResp as any)   // send_tx
-      .mockResolvedValueOnce(okResp as any);   // broadcast_tx_commit
+      .mockResolvedValueOnce(errResp as any)
+      .mockResolvedValueOnce(okResp as any);
 
     const out = await guard.post('http://rpc.testnet.near.org', reqSendTx);
     expect(out.result.status).toBe('Completed');

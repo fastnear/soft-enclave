@@ -1,7 +1,18 @@
 import { defineConfig } from 'vite';
+import path from 'path';
 
 export default defineConfig({
   root: 'demo',
+  resolve: {
+    alias: {
+      '@fastnear/soft-enclave': path.resolve(__dirname, './packages/soft-enclave/src/index.ts'),
+      '@fastnear/soft-enclave-core': path.resolve(__dirname, './packages/core/src/index.ts'),
+      '@fastnear/soft-enclave-shared': path.resolve(__dirname, './packages/shared/src/index.ts'),
+      '@fastnear/soft-enclave-worker': path.resolve(__dirname, './packages/worker/src/index.ts'),
+      '@fastnear/soft-enclave-iframe': path.resolve(__dirname, './packages/iframe/src/index.ts'),
+      '@fastnear/soft-enclave-near': path.resolve(__dirname, './packages/near/src/index.ts'),
+    }
+  },
   server: {
     port: 3000,
     cors: true,

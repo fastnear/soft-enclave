@@ -8,14 +8,15 @@
  * - Removed APIs → setTimeout, etc. not accessible
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
 import {
   hardenRealm,
   deriveSeedFromData,
   verifyDeterminism,
   createCompartment,
   __test__,
-} from '../src/shared/deterministic-shims.js';
+} from '@fastnear/soft-enclave-shared';
+import { muteConsoleErrors, muteConsoleWarns } from './helpers/console';
 
 describe('Deterministic Math.random()', () => {
   it('should produce same sequence with same seed', () => {
@@ -125,9 +126,31 @@ describe('Deterministic Date', () => {
 describe('hardenRealm()', () => {
   let originalRandom;
   let originalDate;
+  let restoreConsole;
+
+  beforeAll(() => {
+    // Mute expected console noise from hardenRealm (Cyclic __proto__, read-only properties)
+    const restoreErrors = muteConsoleErrors([
+      /Cyclic __proto__/i,
+      /read[-\s]?only property 'constructor'/i
+    ]);
+    const restoreWarns = muteConsoleWarns([
+      /Cyclic __proto__/i,
+      /Could not freeze/i,
+      /Could not replace Date/i
+    ]);
+    restoreConsole = () => {
+      restoreErrors();
+      restoreWarns();
+    };
+  });
+
+  afterAll(() => {
+    restoreConsole?.();
+  });
 
   beforeEach(() => {
-    // Save originals
+    // Save originals for restoration between tests
     originalRandom = Math.random;
     originalDate = Date;
   });
@@ -412,6 +435,27 @@ describe('Real-World Determinism Test', () => {
 });
 
 describe('Security: Prototype Poisoning Prevention', () => {
+  let restoreConsole;
+
+  beforeAll(() => {
+    // Mute expected console noise from freezing primordials
+    const restoreErrors = muteConsoleErrors([
+      /read[-\s]?only property/i,
+      /Cannot assign to read only/i
+    ]);
+    const restoreWarns = muteConsoleWarns([
+      /Could not freeze/i
+    ]);
+    restoreConsole = () => {
+      restoreErrors();
+      restoreWarns();
+    };
+  });
+
+  afterAll(() => {
+    restoreConsole?.();
+  });
+
   it('should prevent Object.prototype modification', () => {
     hardenRealm({ freezePrimordials: true });
 

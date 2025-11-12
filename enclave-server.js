@@ -28,7 +28,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const PORT = 8081;
-const HOST_ORIGIN = 'http://localhost:3000'; // Expected parent origin
+const HOST_ORIGIN = process.env.HOST_ORIGIN || 'http://localhost:3000'; // Expected parent origin
 
 // MIME types for proper content-type headers
 const MIME_TYPES = {
@@ -43,6 +43,8 @@ const MIME_TYPES = {
  * Generate strict security headers for enclave origin
  */
 function getSecurityHeaders() {
+  const hostOrigin = process.env.HOST_ORIGIN || 'http://localhost:3000';
+
   return {
     // Cross-Origin Isolation
     'Cross-Origin-Opener-Policy': 'same-origin',
@@ -54,7 +56,7 @@ function getSecurityHeaders() {
       "script-src 'self'",            // Only allow scripts from our origin
       "connect-src 'self'",           // Only allow connections to our origin
       "worker-src 'self'",            // Only allow workers from our origin
-      `frame-ancestors ${HOST_ORIGIN}`, // Only allow embedding from expected parent
+      `frame-ancestors ${hostOrigin}`, // Only allow embedding from expected parent
       "base-uri 'none'",              // Prevent base tag injection
       "form-action 'none'",           // No form submissions
       "object-src 'none'",            // No plugins
@@ -72,7 +74,7 @@ function getSecurityHeaders() {
     'Permissions-Policy': 'geolocation=(), microphone=(), camera=()', // Disable unnecessary APIs
 
     // CORS - Allow requests from expected parent origin
-    'Access-Control-Allow-Origin': HOST_ORIGIN,
+    'Access-Control-Allow-Origin': hostOrigin,
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
@@ -181,6 +183,9 @@ server.listen(PORT, () => {
   console.log('━'.repeat(60));
   console.log('\nPress Ctrl+C to stop\n');
 });
+
+// Export for testing (ES module syntax)
+export { getSecurityHeaders };
 
 // Graceful shutdown
 process.on('SIGINT', () => {

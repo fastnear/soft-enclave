@@ -26,13 +26,13 @@ import {
   measureTiming,
   sha256,
   encodeUtf8,
-  deriveSessionWithContext,
+  deriveSession,
   encryptWithSequence,
   decryptWithSequence,
   seal,  // v1.1 API
   open   // v1.1 API
-} from '@near/soft-enclave-shared';
-import { MessageType, AAD } from '@near/soft-enclave-shared';
+} from '@fastnear/soft-enclave-shared';
+import { MessageType, AAD } from '@fastnear/soft-enclave-shared';
 
 class EnclaveWorker {
   quickjs: any;
@@ -273,7 +273,7 @@ class EnclaveWorker {
       codeHash: codeHashHex
     };
 
-    const session = await deriveSessionWithContext({
+    const session = await deriveSession({
       privateKey: keyPair.privateKey,
       peerPublicKey: hostPublicKey,
       selfPublicKeyRaw: publicKeyData, // Transcript binding (v1.1)

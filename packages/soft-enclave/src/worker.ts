@@ -1,2 +1,2 @@
 // Worker backend exports
-export * from '@near/soft-enclave-worker'
+export * from '@fastnear/soft-enclave-worker'

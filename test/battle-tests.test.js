@@ -22,7 +22,7 @@ import {
   ivFromSequence,
   sha256,
   encodeUtf8
-} from '../src/shared/crypto-protocol.js';
+} from '@fastnear/soft-enclave-shared';
 
 describe('Battle-Test 1: Replay Protection', () => {
   it('should detect and reject replay attacks with duplicate IVs', async () => {
@@ -51,15 +51,15 @@ describe('Battle-Test 1: Replay Protection', () => {
     const baseIV = new Uint8Array(12).fill(0x42);
 
     // First time: should succeed
-    const iv1 = ivFromSequence(baseIV, 0);
+    const iv1 = ivFromSequence(baseIV, 1);
     expect(checkReplay(iv1)).toBe(true);
 
     // Same IV again: should fail (replay!)
-    const iv1Duplicate = ivFromSequence(baseIV, 0);
+    const iv1Duplicate = ivFromSequence(baseIV, 1);
     expect(checkReplay(iv1Duplicate)).toBe(false);
 
     // Different IV: should succeed
-    const iv2 = ivFromSequence(baseIV, 1);
+    const iv2 = ivFromSequence(baseIV, 2);
     expect(checkReplay(iv2)).toBe(true);
 
     console.log('[Battle-Test] ✓ Replay protection: duplicate IVs rejected');
@@ -69,7 +69,7 @@ describe('Battle-Test 1: Replay Protection', () => {
     const seenIVs = new Set();
     const baseIV = crypto.getRandomValues(new Uint8Array(12));
 
-    for (let i = 0; i < 10000; i++) {
+    for (let i = 1; i <= 10000; i++) {
       const iv = ivFromSequence(baseIV, i);
       const ivHex = Array.from(iv).map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -103,7 +103,7 @@ describe('Battle-Test 1: Replay Protection', () => {
     const message1 = await encryptWithSequence(
       session.aeadKey,
       session.baseIV,
-      0,
+      1,
       { data: 'secret' },
       'test'
     );
@@ -150,7 +150,7 @@ describe('Battle-Test 2: Nonce Discipline (No IV Reuse)', () => {
     const ivSet = new Set();
 
     // Encrypt 1000 messages
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 1; i <= 1000; i++) {
       const encrypted = await encryptWithSequence(
         session.aeadKey,
         session.baseIV,
@@ -177,11 +177,11 @@ describe('Battle-Test 2: Nonce Discipline (No IV Reuse)', () => {
     const baseIV = new Uint8Array(12).fill(0xAB);
 
     // Simulate host sending (Tx counter)
-    const txSeq = 0;
+    const txSeq = 1;
     const ivTx = ivFromSequence(baseIV, txSeq);
 
-    // Simulate worker sending (Rx counter, also starts at 0)
-    const rxSeq = 0;
+    // Simulate worker sending (Rx counter, also starts at 1)
+    const rxSeq = 1;
     const ivRx = ivFromSequence(baseIV, rxSeq);
 
     // Same sequence number but from same baseIV = same IV (that's expected!)
@@ -236,7 +236,7 @@ describe('Battle-Test 3: Context Binding', () => {
     const encrypted = await encryptWithSequence(
       session1.aeadKey,
       session1.baseIV,
-      0,
+      1,
       { data: 'secret' },
       'test'
     );
@@ -280,7 +280,7 @@ describe('Battle-Test 3: Context Binding', () => {
     const encrypted = await encryptWithSequence(
       session1.aeadKey,
       session1.baseIV,
-      0,
+      1,
       { data: 'secret' },
       'test'
     );
@@ -315,7 +315,7 @@ describe('Battle-Test 4: AAD Prevents Message Confusion', () => {
     const encrypted = await encryptWithSequence(
       session.aeadKey,
       session.baseIV,
-      0,
+      1,
       { operation: 'execute' },
       'EXECUTE' // AAD
     );
@@ -361,7 +361,7 @@ describe('Battle-Test 4: AAD Prevents Message Confusion', () => {
     const executeMsg = await encryptWithSequence(
       session.aeadKey,
       session.baseIV,
-      0,
+      1,
       { code: 'malicious.code()' },
       'EXECUTE'
     );
@@ -409,7 +409,7 @@ describe('Battle-Test 5: Counter-Based IV Properties', () => {
 
     const ivSet = new Set();
 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 1; i <= 100; i++) {
       const iv = ivFromSequence(baseIV, i);
       const ivHex = Array.from(iv).map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -459,7 +459,7 @@ describe('Battle-Test 6: Performance Under Load', () => {
     const startTime = performance.now();
 
     const operations = [];
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 1; i <= 1000; i++) {
       operations.push(
         (async () => {
           const encrypted = await encryptWithSequence(
@@ -504,8 +504,8 @@ describe('Battle-Test 7: Session Independence', () => {
     const session2 = await deriveSessionWithContext(keyPair1.privateKey, keyPair2.publicKey, ctx2);
 
     // Encrypt with both sessions using same sequence number
-    const encrypted1 = await encryptWithSequence(session1.aeadKey, session1.baseIV, 0, { msg: 'one' }, 'test');
-    const encrypted2 = await encryptWithSequence(session2.aeadKey, session2.baseIV, 0, { msg: 'two' }, 'test');
+    const encrypted1 = await encryptWithSequence(session1.aeadKey, session1.baseIV, 1, { msg: 'one' }, 'test');
+    const encrypted2 = await encryptWithSequence(session2.aeadKey, session2.baseIV, 1, { msg: 'two' }, 'test');
 
     // IVs should be different (different baseIVs)
     expect(encrypted1.iv).not.toEqual(encrypted2.iv);

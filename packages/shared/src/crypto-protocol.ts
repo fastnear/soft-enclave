@@ -61,7 +61,7 @@ export async function measureTiming(operation) {
 // ============================================================================
 
 export async function genECDH() {
-  return crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  return crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits", "deriveKey"]);
 }
 
 export async function exportRaw(pub) {
@@ -239,8 +239,74 @@ export async function deriveSession(opts) {
   return { aeadKey, baseIV };
 }
 
-// Legacy export for compatibility
-export const deriveSessionWithContext = deriveSession;
+// Legacy export for compatibility (converts old API to new API)
+export async function deriveSessionWithContext(privateKey: CryptoKey, publicKey: CryptoKey, ctx: any) {
+  // Get our own public key from the private key's key pair
+  // We need to extract it from somewhere - but we don't have access to it here
+  // This is a limitation of the legacy API
+
+  // The legacy API doesn't provide selfPublicKeyRaw, so we can't use the new API properly
+  // We'll need to perform ECDH directly without transcript binding for legacy compatibility
+
+  // Perform ECDH to get IKM
+  const ikm = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      { name: "ECDH", public: publicKey },
+      privateKey,
+      256
+    )
+  );
+
+  // Create context-bound salt (same as before)
+  const salt = await sha256(
+    enc(`${ctx.hostOrigin||''}|${ctx.enclaveOrigin||''}|${ctx.codeHash||''}`)
+  );
+
+  // Protocol version identifier
+  const infoBase = enc("soft-enclave/v1");
+
+  // Import IKM as HKDF key
+  const hkdfKey = await crypto.subtle.importKey(
+    "raw",
+    ikm,
+    "HKDF",
+    false,
+    ["deriveKey", "deriveBits"]
+  );
+
+  // Derive AEAD key (without transcript hash for legacy)
+  const aeadKey = await crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt,
+      info: concat(infoBase, enc("/aead/"))
+    },
+    hkdfKey,
+    { name: "AES-GCM", length: 256 },
+    false, // NOT extractable
+    ["encrypt", "decrypt"]
+  );
+
+  // Derive base IV (without transcript hash for legacy)
+  const baseIV = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt,
+        info: concat(infoBase, enc("/iv/"))
+      },
+      hkdfKey,
+      96 // 12 bytes for AES-GCM IV
+    )
+  );
+
+  // Zero out IKM (best effort)
+  ikm.fill(0);
+
+  return { aeadKey, baseIV };
+}
 
 // ============================================================================
 // Counter-based IV generation

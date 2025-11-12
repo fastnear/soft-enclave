@@ -2,7 +2,7 @@
 // Re-export everything from sub-packages
 
 // Core factory and base classes
-export * from '@near/soft-enclave-core'
+export * from '@fastnear/soft-enclave-core'
 
 // Shared utilities (crypto protocols, message types)
-export * from '@near/soft-enclave-shared'
+export * from '@fastnear/soft-enclave-shared'

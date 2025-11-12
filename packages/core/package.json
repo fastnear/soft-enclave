@@ -1,5 +1,5 @@
 {
-  "name": "@near/soft-enclave-core",
+  "name": "@fastnear/soft-enclave-core",
   "version": "0.1.0",
   "description": "Core enclave factory and base classes",
   "type": "module",
@@ -21,7 +21,7 @@
     }
   },
   "dependencies": {
-    "@near/soft-enclave-shared": "workspace:*"
+    "@fastnear/soft-enclave-shared": "workspace:*"
   },
   "devDependencies": {
     "rimraf": "*",
@@ -32,6 +32,11 @@
     "soft-enclave",
     "core"
   ],
-  "author": "",
+  "author": "FastNEAR",
+  "homepage": "https://github.com/fastnear/soft-enclave",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fastnear/soft-enclave.git"
+  },
   "license": "MIT"
 }

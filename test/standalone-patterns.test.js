@@ -24,24 +24,24 @@ import {
   importPublicKey,
   serializePayload,
   deserializePayload,
-} from '../src/shared/crypto-protocol.js';
+} from '@fastnear/soft-enclave-shared';
 
 describe('Counter-Based IV Management', () => {
   it('should generate unique IVs for different sequence numbers', () => {
     const baseIV = new Uint8Array(12).fill(0xAB);
 
-    const iv1 = ivFromSequence(baseIV, 0);
-    const iv2 = ivFromSequence(baseIV, 1);
-    const iv3 = ivFromSequence(baseIV, 2);
+    const iv1 = ivFromSequence(baseIV, 1);
+    const iv2 = ivFromSequence(baseIV, 2);
+    const iv3 = ivFromSequence(baseIV, 3);
 
     // All IVs should be different
     expect(iv1).not.toEqual(iv2);
     expect(iv2).not.toEqual(iv3);
     expect(iv1).not.toEqual(iv3);
 
-    console.log('[Counter IV] seq=0:', Array.from(iv1).map(b => b.toString(16).padStart(2, '0')).join(''));
-    console.log('[Counter IV] seq=1:', Array.from(iv2).map(b => b.toString(16).padStart(2, '0')).join(''));
-    console.log('[Counter IV] seq=2:', Array.from(iv3).map(b => b.toString(16).padStart(2, '0')).join(''));
+    console.log('[Counter IV] seq=1:', Array.from(iv1).map(b => b.toString(16).padStart(2, '0')).join(''));
+    console.log('[Counter IV] seq=2:', Array.from(iv2).map(b => b.toString(16).padStart(2, '0')).join(''));
+    console.log('[Counter IV] seq=3:', Array.from(iv3).map(b => b.toString(16).padStart(2, '0')).join(''));
   });
 
   it('should be deterministic - same seq produces same IV', () => {
@@ -58,7 +58,7 @@ describe('Counter-Based IV Management', () => {
   it('should handle large sequence numbers', () => {
     const baseIV = new Uint8Array(12).fill(0);
 
-    const iv1 = ivFromSequence(baseIV, 0);
+    const iv1 = ivFromSequence(baseIV, 1);
     const iv2 = ivFromSequence(baseIV, 0xFFFFFFFF); // Max 32-bit
 
     expect(iv1).not.toEqual(iv2);
@@ -94,18 +94,18 @@ describe('Counter-Based IV Management', () => {
   it('should reject invalid baseIV length', () => {
     const invalidIV = new Uint8Array(10); // Not 12 bytes
 
-    expect(() => ivFromSequence(invalidIV, 0)).toThrow('baseIV must be 12 bytes');
+    expect(() => ivFromSequence(invalidIV, 1)).toThrow('baseIV must be 12 bytes');
   });
 
   it('should handle sequence wraparound', () => {
     const baseIV = new Uint8Array(12).fill(0);
 
     // These should produce different IVs even with wraparound
-    const iv1 = ivFromSequence(baseIV, 0);
-    const iv2 = ivFromSequence(baseIV, 1);
-    const iv3 = ivFromSequence(baseIV, 0x100000000); // Wraps to 0
+    const iv1 = ivFromSequence(baseIV, 1);
+    const iv2 = ivFromSequence(baseIV, 2);
+    const iv3 = ivFromSequence(baseIV, 0x100000001); // Wraps to 1
 
-    // seq=0x100000000 wraps to 0 (32-bit), so should match seq=0
+    // seq=0x100000001 wraps to 1 (32-bit), so should match seq=1
     expect(iv1).toEqual(iv3);
     expect(iv1).not.toEqual(iv2);
 
@@ -484,7 +484,7 @@ describe('Performance Benchmarks', () => {
     const iterations = 1000;
     const start = performance.now();
 
-    for (let i = 0; i < iterations; i++) {
+    for (let i = 1; i <= iterations; i++) {
       await encryptWithSequence(session.aeadKey, session.baseIV, i, plaintext, 'test');
     }
 

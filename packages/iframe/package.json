@@ -1,5 +1,5 @@
 {
-  "name": "@near/soft-enclave-iframe",
+  "name": "@fastnear/soft-enclave-iframe",
   "version": "0.1.0",
   "description": "iframe backend for soft-enclave",
   "type": "module",
@@ -22,8 +22,8 @@
     }
   },
   "dependencies": {
-    "@near/soft-enclave-core": "workspace:*",
-    "@near/soft-enclave-shared": "workspace:*",
+    "@fastnear/soft-enclave-core": "workspace:*",
+    "@fastnear/soft-enclave-shared": "workspace:*",
     "quickjs-emscripten": "*"
   },
   "devDependencies": {
@@ -36,6 +36,11 @@
     "iframe",
     "backend"
   ],
-  "author": "",
+  "author": "FastNEAR",
+  "homepage": "https://github.com/fastnear/soft-enclave",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fastnear/soft-enclave.git"
+  },
   "license": "MIT"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@near/soft-enclave",
+  "name": "@fastnear/soft-enclave",
   "version": "0.1.0",
   "description": "Browser-based soft enclave using QuickJS-WASM with cross-origin isolation and encrypted communication",
   "type": "module",
@@ -34,11 +34,11 @@
     }
   },
   "dependencies": {
-    "@near/soft-enclave-core": "workspace:*",
-    "@near/soft-enclave-iframe": "workspace:*",
-    "@near/soft-enclave-near": "workspace:*",
-    "@near/soft-enclave-shared": "workspace:*",
-    "@near/soft-enclave-worker": "workspace:*"
+    "@fastnear/soft-enclave-core": "workspace:*",
+    "@fastnear/soft-enclave-iframe": "workspace:*",
+    "@fastnear/soft-enclave-near": "workspace:*",
+    "@fastnear/soft-enclave-shared": "workspace:*",
+    "@fastnear/soft-enclave-worker": "workspace:*"
   },
   "devDependencies": {
     "rimraf": "*",
@@ -54,6 +54,11 @@
     "near",
     "web-crypto"
   ],
-  "author": "",
+  "author": "FastNEAR",
+  "homepage": "https://github.com/fastnear/soft-enclave",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fastnear/soft-enclave.git"
+  },
   "license": "MIT"
 }

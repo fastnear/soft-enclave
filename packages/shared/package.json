@@ -1,5 +1,5 @@
 {
-  "name": "@near/soft-enclave-shared",
+  "name": "@fastnear/soft-enclave-shared",
   "version": "0.1.0",
   "description": "Shared utilities for soft-enclave (crypto protocols, message types)",
   "type": "module",
@@ -35,6 +35,11 @@
     "crypto",
     "protocol"
   ],
-  "author": "",
+  "author": "FastNEAR",
+  "homepage": "https://github.com/fastnear/soft-enclave",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fastnear/soft-enclave.git"
+  },
   "license": "MIT"
 }
