@@ -5,6 +5,11 @@ import {
 import { createQuickJS } from './quickjs-runtime.js';
 
 const EXPECTED_PARENT = new URL(document.referrer || 'http://localhost:8080').origin;
+document.body.innerHTML = `<div style="padding: 20px; font-family: monospace;">
+  <h2 style="color: green;">✓ Enclave Loaded</h2>
+  <p>Expected parent: <code>${EXPECTED_PARENT}</code></p>
+  <p>Status: <span id="status">Waiting for parent...</span></p>
+</div>`;
 
 let port: MessagePort | null = null;
 let session: any = null;
@@ -28,35 +33,63 @@ function guardedPost(msg: any) {
 }
 
 (async function main(){
+  console.log('🟢 [Enclave] main() started');
+  console.log('🟢 [Enclave] Expected parent origin:', EXPECTED_PARENT);
+  console.log('🟢 [Enclave] Enclave origin:', location.origin);
+
+  console.log('🟢 [Enclave] Waiting for connect message...');
   await new Promise<void>(resolve => {
-    window.addEventListener('message', (ev) => {
-      if (ev.origin !== EXPECTED_PARENT) return;
+    const onMessage = (ev: MessageEvent) => {
+      console.log('🟢 [Enclave] Received message:', {
+        origin: ev.origin,
+        expectedOrigin: EXPECTED_PARENT,
+        type: ev.data?.type,
+        hasPorts: !!ev.ports?.[0]
+      });
+
+      if (ev.origin !== EXPECTED_PARENT) {
+        console.log('🟢 [Enclave] Ignoring message: origin mismatch');
+        return;
+      }
       if (ev.data?.type === 'connect' && ev.ports?.[0]) {
+        console.log('✅ [Enclave] Received connect message with port!');
+        window.removeEventListener('message', onMessage);
         port = ev.ports[0];
         port.start();
         resolve();
       }
-    }, { once:true });
+    };
+    window.addEventListener('message', onMessage);
   });
 
+  console.log('🟢 [Enclave] Creating QuickJS...');
   const qjs = await createQuickJS();
+  console.log('✅ [Enclave] QuickJS created');
 
+  console.log('🟢 [Enclave] Generating ECDH keys...');
   const keys = await genECDH();
   const enclavePub = await exportRaw(keys.publicKey);
   const codeHash = 'soft-enclave-demo-v1';
+  console.log('✅ [Enclave] ECDH keys generated');
 
+  console.log('🟢 [Enclave] Posting enclave-ready to parent...');
   postToParent('enclave-ready', { enclavePubKey: Array.from(enclavePub), codeHash });
+  console.log('✅ [Enclave] enclave-ready posted');
 
   port!.onmessage = async (evt) => {
     const msg = evt.data || {};
+    console.log('🟢 [Enclave] Received port message:', msg.type);
+
     try {
       if (msg.type === 'host-hello') {
+        console.log('🟢 [Enclave] Processing host-hello...');
         const hostPub = await importRaw(new Uint8Array(msg.hostPubKey));
         session = await deriveSession(keys.privateKey, hostPub, {
           hostOrigin: EXPECTED_PARENT,
           enclaveOrigin: location.origin,
           codeHash
         });
+        console.log('✅ [Enclave] Session established!');
         return;
       }
 

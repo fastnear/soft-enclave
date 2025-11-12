@@ -27,16 +27,18 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PORT = 8081;
+const PORT = Number(process.env.ENCLAVE_PORT || 3010); // iframe backend expects 3010 (host:3000 + 10)
 const HOST_ORIGIN = process.env.HOST_ORIGIN || 'http://localhost:3000'; // Expected parent origin
 
 // MIME types for proper content-type headers
 const MIME_TYPES = {
   '.js': 'application/javascript; charset=utf-8',
   '.mjs': 'application/javascript; charset=utf-8',
+  '.ts': 'application/javascript; charset=utf-8',
   '.wasm': 'application/wasm',
   '.json': 'application/json; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
 };
 
 /**
@@ -50,21 +52,16 @@ function getSecurityHeaders() {
     'Cross-Origin-Opener-Policy': 'same-origin',
     'Cross-Origin-Embedder-Policy': 'require-corp',
 
-    // Content Security Policy - MAXIMUM RESTRICTION
+    // Content Security Policy - RELAXED FOR DEBUGGING
     'Content-Security-Policy': [
-      "default-src 'none'",           // Block everything by default
-      "script-src 'self'",            // Only allow scripts from our origin
+      "default-src 'self'",           // Allow resources from same origin
+      "script-src 'self' 'wasm-unsafe-eval'", // Allow WASM compilation (not JS eval)
+      "style-src 'self' 'unsafe-inline'", // Allow inline styles for debugging
       "connect-src 'self'",           // Only allow connections to our origin
       "worker-src 'self'",            // Only allow workers from our origin
       `frame-ancestors ${hostOrigin}`, // Only allow embedding from expected parent
       "base-uri 'none'",              // Prevent base tag injection
-      "form-action 'none'",           // No form submissions
-      "object-src 'none'",            // No plugins
-      "font-src 'none'",              // No fonts
-      "img-src 'none'",               // No images
-      "media-src 'none'",             // No media
-      "style-src 'none'",             // No stylesheets
-      "upgrade-insecure-requests"     // Force HTTPS in production
+      "form-action 'none'"            // No form submissions
     ].join('; '),
 
     // Additional Security Headers
@@ -78,6 +75,10 @@ function getSecurityHeaders() {
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
+
+    // Cross-Origin Resource Policy - Required for COEP compatibility
+    // Allows cross-origin fetching when constructing Worker from Blob URL
+    'Cross-Origin-Resource-Policy': 'cross-origin',
   };
 }
 
@@ -97,6 +98,13 @@ async function serveFile(filePath, res) {
       'Content-Length': content.length,
       'Cache-Control': 'no-cache', // Development mode - disable caching
     };
+
+    // WASM files need additional CORS/CORP headers for cross-origin loading
+    if (ext === '.wasm') {
+      headers['Access-Control-Allow-Origin'] = HOST_ORIGIN;
+      headers['Vary'] = 'Origin';
+      headers['Cross-Origin-Resource-Policy'] = 'cross-origin';
+    }
 
     res.writeHead(200, headers);
     res.end(content);
@@ -128,11 +136,33 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // Handle HEAD requests (for debugging with curl -I)
+  if (req.method === 'HEAD') {
+    // HEAD is like GET but without body
+    const ext = extname(req.url.split('?')[0]);
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    const headers = {
+      ...getSecurityHeaders(),
+      'Content-Type': contentType,
+    };
+
+    // Add WASM-specific headers
+    if (ext === '.wasm') {
+      headers['Access-Control-Allow-Origin'] = HOST_ORIGIN;
+      headers['Vary'] = 'Origin';
+      headers['Cross-Origin-Resource-Policy'] = 'cross-origin';
+    }
+
+    res.writeHead(200, headers);
+    res.end();
+    return;
+  }
+
   // Only allow GET requests
   if (req.method !== 'GET') {
     res.writeHead(405, {
       ...getSecurityHeaders(),
-      'Allow': 'GET, OPTIONS',
+      'Allow': 'GET, HEAD, OPTIONS',
     });
     res.end('Method Not Allowed');
     return;
@@ -144,6 +174,56 @@ async function handleRequest(req, res) {
   if (req.url === '/' || req.url === '/enclave-worker.js') {
     // Main worker entry point
     filePath = join(__dirname, 'src/enclave/enclave-worker.js');
+  } else if (req.url === '/boot.html') {
+    // iframe backend boot page
+    filePath = join(__dirname, 'packages/iframe/src/enclave/boot.html');
+  } else if (req.url === '/egress-assert.js') {
+    // iframe backend egress guard (built)
+    filePath = join(__dirname, 'packages/iframe/dist/esm/enclave/egress-assert.js');
+  } else if (req.url === '/enclave-main.js') {
+    // iframe backend main script (built)
+    filePath = join(__dirname, 'packages/iframe/dist/esm/enclave/enclave-main.js');
+  } else if (req.url === '/crypto-protocol.js') {
+    // iframe backend crypto protocol (built)
+    filePath = join(__dirname, 'packages/iframe/dist/esm/enclave/crypto-protocol.js');
+  } else if (req.url === '/quickjs-runtime.js') {
+    // iframe backend QuickJS runtime (built)
+    filePath = join(__dirname, 'packages/iframe/dist/esm/enclave/quickjs-runtime.js');
+  } else if (req.url.startsWith('/vendor/')) {
+    // QuickJS vendor files - map to node_modules
+    const vendorFile = req.url.replace('/vendor/', '');
+    if (vendorFile === 'quickjs-emscripten.mjs' || vendorFile === 'quickjs-emscripten-core.mjs') {
+      filePath = join(__dirname, 'node_modules/quickjs-emscripten/dist/index.mjs');
+    } else if (vendorFile.endsWith('.wasm')) {
+      // WASM files from @jitl packages (e.g., emscripten-module.wasm)
+      // Check each QuickJS variant package
+      const variants = [
+        'quickjs-wasmfile-release-sync',
+        'quickjs-wasmfile-release-asyncify',
+        'quickjs-wasmfile-debug-sync',
+        'quickjs-wasmfile-debug-asyncify'
+      ];
+      for (const variant of variants) {
+        const wasmPath = join(__dirname, `node_modules/@jitl/${variant}/dist/${vendorFile}`);
+        try {
+          await readFile(wasmPath);
+          filePath = wasmPath;
+          break;
+        } catch {
+          // Try next variant
+        }
+      }
+      if (!filePath) {
+        // Fallback to quickjs-emscripten dist
+        filePath = join(__dirname, 'node_modules/quickjs-emscripten/dist/', vendorFile);
+      }
+    } else {
+      // Allow other vendor files from node_modules
+      filePath = join(__dirname, 'node_modules/quickjs-emscripten/dist/', vendorFile);
+    }
+  } else if (req.url.startsWith('/packages/')) {
+    // iframe backend files
+    filePath = join(__dirname, req.url);
   } else if (req.url.startsWith('/src/')) {
     // Shared utilities
     filePath = join(__dirname, req.url);
@@ -177,9 +257,14 @@ server.listen(PORT, () => {
   console.log('  ✓ Frame-Ancestors: restricted to parent only');
   console.log('  ✓ CORS: restricted to parent origin');
   console.log('\nServing:');
-  console.log('  /enclave-worker.js → src/enclave/enclave-worker.js');
-  console.log('  /src/shared/*      → Shared utilities');
-  console.log('  /node_modules/*    → Dependencies');
+  console.log('  Worker Backend:');
+  console.log('    /enclave-worker.js → src/enclave/enclave-worker.js');
+  console.log('  iframe Backend:');
+  console.log('    /boot.html → packages/iframe/src/enclave/boot.html');
+  console.log('    /*.js      → packages/iframe/dist/esm/enclave/*.js (built files)');
+  console.log('  Shared:');
+  console.log('    /src/shared/*      → Shared utilities');
+  console.log('    /node_modules/*    → Dependencies');
   console.log('━'.repeat(60));
   console.log('\nPress Ctrl+C to stop\n');
 });
