@@ -15,16 +15,19 @@ A defense-in-depth approach to browser security that provides measurable improve
 ## Quick Start
 
 ```bash
-# Install
+# Install dependencies
 yarn install
+
+# Build all packages (required before first run)
+yarn build
 
 # Terminal 1 - Host app
 yarn dev
 # Opens at http://localhost:3000
 
-# Terminal 2 - Enclave worker (recommended)
-yarn dev:worker
-# Or for iframe backend: yarn dev:iframe
+# Terminal 2 - iframe backend (default, port 3010)
+yarn dev:iframe
+# Or for worker backend: yarn dev:worker (port 8081)
 ```
 
 Visit http://localhost:3000 to see:
@@ -59,18 +62,18 @@ console.log('Key exposure window:', metrics.keyExposureMs, 'ms'); // ~40ms
 
 | Backend | Isolation | Protocol | Use Case |
 |---------|-----------|----------|----------|
-| **Worker** (default) | Web Worker | Advanced (v1.1) with transcript binding | Production |
-| **iframe** | Cross-origin iframe | Simple ECDH+HKDF | Development, debugging |
+| **iframe** (default) | Cross-origin iframe | Simple ECDH+HKDF | Production, CSP-compatible |
+| **Worker** | Web Worker | Advanced (v1.1) with transcript binding | Performance-critical (requires blob: in CSP) |
 
 ```javascript
-// Worker backend (default)
+// iframe backend (default - works with strict CSP)
 const enclave = createEnclave();
 
-// iframe backend
+// Worker backend (requires blob: in worker-src CSP)
 import { createEnclave, EnclaveMode } from '@fastnear/soft-enclave';
 const enclave = createEnclave({
-  mode: EnclaveMode.IFRAME,
-  enclaveOrigin: 'http://localhost:8081'
+  mode: EnclaveMode.WORKER,
+  workerUrl: 'http://localhost:8081/enclave-worker.js'
 });
 ```
 
@@ -131,8 +134,14 @@ const signed = await enclave.signTransaction(transaction, privateKey);
 ## Development
 
 ```bash
-# Run tests
-yarn test
+# Run tests (unit + security)
+yarn test:ci
+
+# Test specific suites
+yarn test:security      # Core security tests
+yarn test:bundle        # IIFE bundle integration tests
+yarn test:e2e          # End-to-end tests (requires RUN_E2E=1)
+yarn test:hpke         # Experimental HPKE tests (requires RUN_HPKE=1)
 
 # Build packages
 yarn build

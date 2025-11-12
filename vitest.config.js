@@ -1,6 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
+// Gate experimental and environment-specific test suites
+const runE2E = process.env.RUN_E2E === '1';
+const runHPKE = process.env.RUN_HPKE === '1';
+
 export default defineConfig({
   test: {
     // Use node environment with browser polyfills
@@ -14,6 +18,16 @@ export default defineConfig({
 
     // Enable globals like describe, it, expect
     globals: true,
+
+    // Deterministic threading for crypto/spies on CI
+    threads: false,
+
+    // Test file patterns
+    include: ['test/**/*.test.{ts,js}'],
+    exclude: [
+      ...(runE2E ? [] : ['test/integration*.test.*', 'test/**/integration/**']),
+      ...(runHPKE ? [] : ['test/hpke-protocol.test.js'])
+    ],
 
     // Suppress expected uncaught errors from primordial freezing
     onUncaughtException(error) {

@@ -82,10 +82,9 @@ export class WorkerBackend extends EnclaveBase {
    * @private
    */
   _detectWorkerUrl() {
-    // In development, assume worker is on different port
+    // In development, worker is served on port 8081
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-      const workerPort = parseInt(location.port) + 1;
-      return `http://${location.hostname}:${workerPort}/enclave-worker.js`;
+      return `http://${location.hostname}:8081/enclave-worker.js`;
     }
 
     // In production, use different subdomain
@@ -114,8 +113,33 @@ export class WorkerBackend extends EnclaveBase {
     this.masterKey = await generateNonExtractableKey();
 
     // Layer 2: Initialize cross-origin worker
+    // NOTE: Workers cannot be constructed directly from cross-origin URLs.
+    // Solution: Fetch script (with CORS) → create Blob URL → construct Worker
     console.log(`[WorkerBackend] Loading worker from: ${this.workerUrl}`);
-    this.worker = new Worker(this.workerUrl, { type: 'module' });
+
+    try {
+      // Fetch the worker script (CORS headers allow this)
+      const response = await fetch(this.workerUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch worker: ${response.status} ${response.statusText}`);
+      }
+
+      const workerCode = await response.text();
+
+      // Create a Blob URL from the fetched script
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Create Worker from Blob URL (same-origin)
+      this.worker = new Worker(blobUrl, { type: 'module' });
+
+      // Clean up Blob URL after worker is created
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('[WorkerBackend] Failed to load worker:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to initialize worker: ${errorMessage}`);
+    }
 
     // Set up message handler
     this.worker.addEventListener('message', this._handleWorkerMessage.bind(this));

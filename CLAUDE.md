@@ -50,20 +50,21 @@ These metrics are exposed to users and logged.
 
 **This project now supports TWO isolation backends:**
 
-### Worker Backend (Default - Recommended for Production)
-- **Location**: `src/backends/worker-backend.js`
-- **Isolation**: Cross-origin Web Worker
-- **Protocol**: Advanced (v1.1) with transcript binding
-- **Entry**: Port 8081 (npm run serve:enclave)
-- **Best for**: Production deployments, cleanest security model
-
-### iframe Backend (Battle-tested from near-outlayer)
+### iframe Backend (Default - CSP-Compatible)
 - **Location**: `src/backends/iframe/`
 - **Isolation**: Cross-origin iframe + MessageChannel
-- **Protocol**: Simple ECDH+HKDF
+- **Protocol**: Simple ECDH+HKDF (default), Advanced available
 - **Entry**: Port 8081 (npm run serve:iframe)
-- **Features**: Explicit egress guard, easier debugging
-- **Best for**: Development, security demos, visual validation
+- **Features**: Explicit egress guard, works with strict CSP, easier debugging
+- **Best for**: Production (CSP-compatible), development, security demos
+
+### Worker Backend (Requires CSP Relaxation)
+- **Location**: `src/backends/worker-backend.js`
+- **Isolation**: Cross-origin Web Worker via Blob URL
+- **Protocol**: Advanced (v1.1) with transcript binding
+- **Entry**: Port 8081 (npm run serve:enclave)
+- **CSP Requirement**: Must allow `worker-src blob:` or `worker-src http://localhost:8081 blob:`
+- **Best for**: Environments with relaxed CSP, performance-critical scenarios
 
 ### Unified Factory API
 
@@ -72,13 +73,12 @@ Both backends use the same interface via `createEnclave()`:
 ```javascript
 import { createEnclave, EnclaveMode } from '@fastnear/soft-enclave';
 
-// Worker backend (default)
+// iframe backend (default - CSP-compatible)
 const enclave = createEnclave();
 
-// iframe backend
+// Worker backend (requires blob: in CSP)
 const enclave = createEnclave({
-  mode: EnclaveMode.IFRAME,
-  enclaveOrigin: 'http://localhost:8081'
+  mode: EnclaveMode.WORKER
 });
 
 // Both have same API:
@@ -224,11 +224,11 @@ soft-enclave/
 
 | Use Case | Backend | Why |
 |----------|---------|-----|
-| Production deployment | Worker | Cleanest security, recommended |
-| Security demonstrations | iframe | Visual egress guard, easier inspection |
-| Development/debugging | iframe | Better DevTools access |
-| High-performance | Worker | Lower overhead |
-| Proving security properties | iframe | Explicit runtime guards |
+| Production with strict CSP | **iframe** | Works without CSP modifications (recommended) |
+| Development/debugging | **iframe** | Better DevTools access, visual egress guard |
+| Security demonstrations | **iframe** | Explicit runtime guards, easier inspection |
+| Production with relaxed CSP | Worker | Slightly lower overhead (requires `blob:` in CSP) |
+| Performance-critical | Worker | Minimal serialization overhead |
 
 ## Development Commands (Updated)
 
@@ -254,6 +254,62 @@ RUN_HPKE=1 npm test      # Include experimental HPKE tests
 npm run build           # Build for production
 npm run preview         # Preview production build
 ```
+
+## CSP Configuration Requirements
+
+### iframe Backend (Default)
+
+The iframe backend requires specific Content Security Policy (CSP) directives to allow cross-origin iframe embedding. These are pre-configured in `vite.config.js`:
+
+**Required CSP Directives:**
+```javascript
+"frame-src 'self' http://localhost:3010"  // Allow enclave iframe (port 3010 = host port + 10)
+"child-src 'self' http://localhost:3010"  // Legacy fallback
+```
+
+**Verification:**
+```bash
+# Check host CSP
+curl -sI http://localhost:3000 | grep -i "content-security-policy"
+
+# Check enclave headers
+curl -sI http://localhost:3010 | egrep -i "cross-origin|content-security-policy"
+```
+
+**Expected headers:**
+- **Host (localhost:3000)**: CSP includes `frame-src ... http://localhost:3010`
+- **Enclave (localhost:3010)**:
+  - `Cross-Origin-Opener-Policy: same-origin`
+  - `Cross-Origin-Embedder-Policy: require-corp`
+  - `Content-Security-Policy: ... frame-ancestors http://localhost:3000`
+  - `Content-Type: application/wasm` for .wasm files
+
+**Production Configuration:**
+
+In production, update CSP origins:
+```javascript
+// Host CSP (your main app)
+"frame-src 'self' https://enclave.yourdomain.com"
+"child-src 'self' https://enclave.yourdomain.com"
+
+// Enclave CSP (enclave-server.js)
+process.env.HOST_ORIGIN = 'https://yourdomain.com'
+```
+
+**Common Issues:**
+
+1. **"Refused to frame ... violates CSP"** → Missing `frame-src` in host CSP
+2. **"Wasm instantiate aborted"** → Check Content-Type: application/wasm on .wasm files
+3. **"Cross-Origin-Embedder-Policy block"** → Ensure enclave has `Cross-Origin-Resource-Policy: cross-origin`
+
+### Worker Backend (Requires CSP Relaxation)
+
+The worker backend requires `blob:` in CSP:
+```javascript
+"worker-src http://localhost:8081 blob:"  // Required for Blob URL loading
+```
+
+This is **stricter** than iframe backend, hence iframe is the default.
 
 ## Critical Implementation Details
 
@@ -324,6 +380,17 @@ Session key is also non-extractable after derivation.
 
 ## Testing Strategy
 
+### Test Suites
+
+**Core test suites** (run in CI):
+- `yarn test:ci` - All unit and security tests (146 tests)
+- `yarn test:security` - Egress guard, channel security, deterministic shims
+- `yarn test:bundle` - IIFE bundle integration tests (validates production artifacts)
+
+**Optional test suites** (gated by environment variables):
+- `yarn test:e2e` - End-to-end integration tests (requires `RUN_E2E=1`)
+- `yarn test:hpke` - Experimental HPKE protocol tests (requires `RUN_HPKE=1`)
+
 ### Crypto Protocol Tests
 
 Test all encryption/decryption operations:
@@ -332,7 +399,18 @@ Test all encryption/decryption operations:
 - ECDH key exchange
 - Serialization for postMessage
 
-**Run:** `npm test test/crypto-protocol.test.js`
+**Run:** `yarn test test/crypto-protocol.test.js`
+
+### IIFE Bundle Tests
+
+Test actual distribution artifacts (not just source):
+- Global hardening (`configurable: false`)
+- Expected API surface exposed
+- No unintended global leaks
+- Bundle size and load performance
+- Source maps and version banners
+
+**Run:** `yarn test:bundle` (builds packages first, then tests IIFE artifacts)
 
 ### Isolation Tests
 

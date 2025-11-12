@@ -47,12 +47,19 @@ class Demo {
       statusEl.className = 'status pending';
       statusEl.innerHTML = '<div class="spinner"></div><div>Initializing enclave...</div>';
 
-      // Create enclave with worker backend
-      this.enclave = await createEnclave({
-        workerUrl: 'http://localhost:8081/enclave-worker.js'
-      });
+      console.log('🚀 [Demo] Starting enclave initialization...');
+      console.log('🚀 [Demo] Host origin:', window.location.origin);
+      console.log('🚀 [Demo] Expected enclave origin: http://localhost:3010');
 
+      // Create enclave with iframe backend (default - CSP-compatible)
+      // The iframe will be loaded from http://localhost:3010
+      console.log('🚀 [Demo] Creating enclave instance...');
+      this.enclave = await createEnclave();
+      console.log('✅ [Demo] Enclave instance created:', this.enclave);
+
+      console.log('🚀 [Demo] Calling enclave.initialize()...');
       await this.enclave.initialize();
+      console.log('✅ [Demo] Enclave initialized successfully!');
 
       statusEl.className = 'status success';
       statusEl.innerHTML = '<div>✓ Enclave initialized successfully!</div>';
