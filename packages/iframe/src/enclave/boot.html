@@ -1,5 +1,6 @@
 <!doctype html>
 <html>
+<head>
   <meta charset="utf-8">
   <!--
     IMPORTANT: Security headers (including frame-ancestors) are set by the enclave server
@@ -11,6 +12,9 @@
     - Content-Security-Policy: (includes frame-ancestors)
   -->
   <title>Enclave</title>
-  <script type="module" src="./egress-assert.js"></script>
-  <script type="module" src="./enclave-main.js"></script>
+</head>
+<body>
+  <!-- Load the bundled enclave app (includes all dependencies: tweetnacl, borsh, vault, near-tx, quickjs, etc.) -->
+  <script type="module" src="/enclave-main.bundle.js"></script>
+</body>
 </html>

@@ -9,6 +9,8 @@
   ],
   "scripts": {
     "build": "yarn workspaces foreach --all -t run build",
+    "build:enclave": "vite build --config vite.enclave.config.ts",
+    "build:enclave:watch": "vite build --config vite.enclave.config.ts --watch",
     "type-check": "yarn workspaces foreach --all -t run type-check",
     "clean": "yarn workspaces foreach --all -t run clean",
     "dev": "vite",

@@ -15,6 +15,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    strictPort: true, // Fail if port is already in use instead of trying another port
     cors: true,
     headers: {
       // Cross-Origin Isolation for process isolation

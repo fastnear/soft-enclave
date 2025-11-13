@@ -105,13 +105,14 @@ export class IframeBackend extends EnclaveBase {
 
     const keyExposureMs = performance.now() - startTime;
 
-    // Enclave doesn't return detailed metrics in near-outlayer version,
-    // so we estimate key exposure as total execution time
+    // Return enclave's actual metrics (keyExposureMs from inside enclave)
+    // Use enclave's measurement if available, otherwise use round-trip time
     return {
       result: result.body,
       metrics: {
-        keyExposureMs: keyExposureMs,
-        logs: result.logs || []
+        keyExposureMs: result.keyExposureMs || keyExposureMs,
+        logs: result.logs || [],
+        memoryZeroed: result.memoryZeroed !== undefined ? result.memoryZeroed : true
       }
     };
   }
@@ -146,7 +147,8 @@ export class IframeBackend extends EnclaveBase {
 
     const totalDuration = performance.now() - startTime;
     const metrics = {
-      keyExposureMs: totalDuration
+      keyExposureMs: result.keyExposureMs || totalDuration,
+      memoryZeroed: result.memoryZeroed !== undefined ? result.memoryZeroed : true
     };
 
     this._updateMetrics(metrics);
@@ -154,7 +156,12 @@ export class IframeBackend extends EnclaveBase {
     console.log(`[IframeBackend] Signing complete in ${totalDuration.toFixed(2)}ms`);
 
     return {
-      signature: result.body.signature,
+      signature: {
+        type: result.body.type || 'ed25519',
+        data: result.body.data || [],
+        signature: result.body.signature
+      },
+      signedTransaction: result.body.signedTransaction,
       metrics,
       totalDurationMs: totalDuration
     };

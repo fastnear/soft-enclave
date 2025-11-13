@@ -9,7 +9,7 @@
 //   await v.clear();
 //   const s = await v.stats();
 
-type Bytes = Uint8Array;
+type Bytes = Uint8Array & { buffer: ArrayBuffer };
 
 type VaultOptions = {
   dbName?: string;           // default: 'soft-enclave-vault'

@@ -55,9 +55,9 @@ function getSecurityHeaders() {
     // Content Security Policy - RELAXED FOR DEBUGGING
     'Content-Security-Policy': [
       "default-src 'self'",           // Allow resources from same origin
-      "script-src 'self' 'wasm-unsafe-eval'", // Allow WASM compilation (not JS eval)
+      "script-src 'self' 'wasm-unsafe-eval'", // Allow WASM compilation (QuickJS)
       "style-src 'self' 'unsafe-inline'", // Allow inline styles for debugging
-      "connect-src 'self'",           // Only allow connections to our origin
+      "connect-src 'self' data:",     // Allow connections to our origin + data URLs (QuickJS WASM)
       "worker-src 'self'",            // Only allow workers from our origin
       `frame-ancestors ${hostOrigin}`, // Only allow embedding from expected parent
       "base-uri 'none'",              // Prevent base tag injection
@@ -177,6 +177,10 @@ async function handleRequest(req, res) {
   } else if (req.url === '/boot.html') {
     // iframe backend boot page
     filePath = join(__dirname, 'packages/iframe/src/enclave/boot.html');
+  } else if (req.url === '/enclave-main.bundle.js' || req.url === '/enclave-main.bundle.js.map') {
+    // iframe backend bundled app (includes all dependencies: tweetnacl, borsh, vault, near-tx, quickjs)
+    const filename = req.url.slice(1); // Remove leading '/'
+    filePath = join(__dirname, 'packages/iframe/dist/enclave-bundle', filename);
   } else if (req.url === '/egress-assert.js') {
     // iframe backend egress guard (built)
     filePath = join(__dirname, 'packages/iframe/dist/esm/enclave/egress-assert.js');

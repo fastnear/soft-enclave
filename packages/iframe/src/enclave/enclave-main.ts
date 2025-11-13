@@ -137,8 +137,48 @@ function guardedPost(msg: any) {
 
         // Handle evalQuickJS operation
         if (call.op === 'evalQuickJS') {
-          const out = qjs.evalQuickJS(call.code);
-          const ct = await seal(session.aeadKey, session.baseIV, seqSend++, out, 'op=evalQuickJS:result');
+          console.log('🟢 [Enclave] Evaluating QuickJS code...');
+
+          // Extract zeroMemory option from context (if provided)
+          let zeroMemory = true; // Default to true for security
+          console.log('🔍 [Enclave] call.context:', call.context);
+          if (call.context) {
+            try {
+              const ctx = JSON.parse(call.context);
+              console.log('🔍 [Enclave] Parsed context:', ctx);
+              console.log('🔍 [Enclave] ctx.zeroMemory:', ctx.zeroMemory, 'type:', typeof ctx.zeroMemory);
+              if (typeof ctx.zeroMemory === 'boolean') {
+                zeroMemory = ctx.zeroMemory;
+                console.log('🔍 [Enclave] Setting zeroMemory to:', zeroMemory);
+              } else {
+                console.log('🔍 [Enclave] ctx.zeroMemory is not a boolean, using default:', zeroMemory);
+              }
+            } catch (e) {
+              console.log('🔍 [Enclave] Failed to parse context:', e);
+              // If context parsing fails, use default
+            }
+          } else {
+            console.log('🔍 [Enclave] No context provided, using default:', zeroMemory);
+          }
+
+          const startTime = performance.now();
+
+          // Use new async eval() method which wraps code properly
+          const out = await qjs.eval(call.code, 2000, zeroMemory);
+
+          const keyExposureMs = performance.now() - startTime;
+          console.log(`✅ [Enclave] QuickJS code evaluated (execution: ${keyExposureMs.toFixed(2)}ms, zeroMemory: ${zeroMemory})`);
+          console.log('🟢 [Enclave] QuickJS result:', out);
+
+          // Format response for iframe-backend compatibility
+          const response = {
+            body: out.ok ? out.value : { error: out.error },
+            logs: [],
+            keyExposureMs,
+            memoryZeroed: out.memoryZeroed !== undefined ? out.memoryZeroed : zeroMemory
+          };
+
+          const ct = await seal(session.aeadKey, session.baseIV, seqSend++, response, 'op=evalQuickJS:result');
           guardedPost({ type:'ciphertext-result', payload: serializePayload(ct), seq: seqSend - 1 });
           return;
         }
@@ -160,13 +200,20 @@ function guardedPost(msg: any) {
           const keyExposureMs = performance.now() - startTime;
           console.log(`✅ [Enclave] Transaction signed (key exposure: ${keyExposureMs.toFixed(2)}ms)`);
 
-          // Return signed transaction with signature
-          const result = {
-            signature: signedTx.signature,
-            signedTransaction: signedTx,
-            keyExposureMs
+          // Format response for iframe-backend compatibility
+          const response = {
+            body: {
+              signature: signedTx.signature,
+              signedTransaction: signedTx,
+              type: 'ed25519',
+              data: Array.from(new TextEncoder().encode(signedTx.signature))
+            },
+            logs: [],
+            keyExposureMs,
+            memoryZeroed: true
           };
-          const ct = await seal(session.aeadKey, session.baseIV, seqSend++, result, 'op=signTransaction:result');
+
+          const ct = await seal(session.aeadKey, session.baseIV, seqSend++, response, 'op=signTransaction:result');
           guardedPost({ type:'ciphertext-result', payload: serializePayload(ct), seq: seqSend - 1 });
           return;
         }
