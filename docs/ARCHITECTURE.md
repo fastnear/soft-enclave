@@ -94,7 +94,7 @@ This project supports **two isolation backends**, both implementing Tier 2 secur
             │ MessageChannel (encrypted)
             ↓
 ┌─────────────────────────────────────────┐
-│ iframe (http://localhost:8081)           │
+│ iframe (http://localhost:3010)           │
 │  ┌────────────────────────────────────┐ │
 │  │ Egress Guard (LOADED FIRST)         │ │
 │  │  - Blocks plaintext messages        │ │
@@ -215,7 +215,7 @@ import { createEnclave, EnclaveMode } from '@fastnear/soft-enclave';
 // Create iframe backend
 const enclave = createEnclave({
   mode: EnclaveMode.IFRAME,
-  enclaveOrigin: 'http://localhost:8081'
+  enclaveOrigin: 'http://localhost:3010'
 });
 
 await enclave.initialize();
@@ -291,7 +291,7 @@ const enclave = createEnclave(tier);
 npm run dev           # http://localhost:3000
 
 # Terminal 2: Worker
-npm run serve:enclave # http://localhost:8081
+npm run serve:enclave # http://localhost:3010
 ```
 
 ### Running iframe Backend
@@ -301,7 +301,7 @@ npm run serve:enclave # http://localhost:8081
 npm run dev           # http://localhost:3000
 
 # Terminal 2: iframe enclave
-npm run serve:iframe  # http://localhost:8081
+npm run serve:iframe  # http://localhost:3010
 ```
 
 ### Testing

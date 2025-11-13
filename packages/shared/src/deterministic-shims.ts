@@ -17,6 +17,85 @@
  */
 
 /**
+ * Check if an error is a benign freeze error
+ *
+ * These errors occur when trying to freeze already-frozen objects or
+ * objects with non-configurable properties. They're expected and harmless.
+ */
+function isBenignFreezeError(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false;
+  const msg = String((e as any).message || e);
+
+  // Known benign patterns from Object.freeze():
+  return (
+    msg.includes("Cannot assign to read only property 'constructor'") ||
+    msg.includes("Cannot assign to read only property") ||
+    msg.includes("Cannot redefine property") ||
+    msg.includes("Cyclic __proto__")
+  );
+}
+
+/**
+ * Safely freeze an object, suppressing benign errors
+ *
+ * @param target - Object to freeze
+ * @param label - Human-readable label for debugging
+ * @returns The target object (frozen or not)
+ */
+function safeFreeze<T extends object>(target: T, label: string): T {
+  try {
+    return Object.freeze(target);
+  } catch (e) {
+    if (isBenignFreezeError(e)) {
+      // Benign error - object is already sufficiently hardened
+      // Optionally log for debugging:
+      // console.debug(`[hardenRealm] Benign freeze error on ${label}:`, (e as any).message);
+      return target;
+    }
+    // Unexpected error - log and rethrow
+    console.error(`[hardenRealm] Unexpected error freezing ${label}:`, e);
+    throw e;
+  }
+}
+
+/**
+ * Harden a global by making it non-configurable and non-writable
+ *
+ * Uses Object.defineProperty to lock a global variable to its current value,
+ * preventing reassignment or deletion. This is the recommended approach for
+ * protecting API surfaces in browser environments (vs. freezing primordials).
+ *
+ * Inspired by the tsup footer pattern used in @fastnear/api.
+ *
+ * @param name - Name of the global to harden
+ * @param value - Optional value to set (defaults to current globalThis[name])
+ * @returns true if successful, false if global doesn't exist or hardening failed
+ */
+function hardenGlobalSurface(name: string, value?: any): boolean {
+  try {
+    const globalObj = typeof globalThis !== 'undefined' ? globalThis : self;
+    const target = value ?? globalObj[name];
+
+    if (!target) {
+      return false;
+    }
+
+    Object.defineProperty(globalObj, name, {
+      value: target,
+      enumerable: true,
+      configurable: false,
+      writable: false
+    });
+
+    return true;
+  } catch (e) {
+    // Already defined with these properties, or environment doesn't support it
+    console.warn(`[hardenRealm] Could not harden global "${name}":`, (e as any).message);
+    return false;
+  }
+}
+
+/**
  * XORShift32 PRNG for deterministic Math.random()
  *
  * Fast, simple, and deterministic pseudorandom number generator.
@@ -26,11 +105,12 @@
  * @returns {function(): number} Deterministic random function
  */
 function createDeterministicRandom(seed) {
-  let state = (seed >>> 0) || 0x9e3779b1; // Default seed if zero
-
-  if (state === 0) {
+  // Check for zero before applying default
+  if (seed === 0) {
     throw new Error('XORShift32 seed must be non-zero');
   }
+
+  let state = (seed >>> 0) || 0x9e3779b1; // Default seed if undefined/null
 
   return function random() {
     // XORShift32 algorithm
@@ -79,9 +159,8 @@ function createDeterministicDate(fixedTime) {
     }
   });
 
-  // Copy static methods
-  Object.setPrototypeOf(DeterministicDate, OriginalDate);
-  DeterministicDate.prototype = OriginalDate.prototype;
+  // Copy static methods (Proxy delegates prototype automatically)
+  // Note: Can't assign to Proxy's prototype property - it's read-only
   DeterministicDate.now = deterministicNow;
   DeterministicDate.UTC = OriginalDate.UTC;
   DeterministicDate.parse = OriginalDate.parse;
@@ -90,77 +169,6 @@ function createDeterministicDate(fixedTime) {
     Date: DeterministicDate,
     now: deterministicNow
   };
-}
-
-/**
- * Freeze primordials to prevent prototype poisoning
- *
- * Freezes built-in constructors and their prototypes so guest code
- * cannot modify them (e.g., Object.prototype.toString).
- *
- * This is a subset of what SES does - for full hardening, use SES.
- */
-function freezePrimordials() {
-  const { freeze, isFrozen } = Object;
-
-  const primordials = [
-    Object,
-    Array,
-    Function,
-    Number,
-    String,
-    Boolean,
-    RegExp,
-    Map,
-    Set,
-    WeakMap,
-    WeakSet,
-    Error,
-    Promise,
-    Symbol,
-    // Math and JSON are already immutable objects
-  ];
-
-  for (const ctor of primordials) {
-    // Only freeze if not already frozen
-    if (!isFrozen(ctor)) {
-      try {
-        freeze(ctor);
-      } catch (e) {
-        // Some environments may not allow freezing constructors
-        // Suppress expected errors (read-only properties, already frozen, etc.)
-      }
-    }
-
-    // Only freeze prototype if it exists and isn't already frozen
-    if (ctor.prototype && !isFrozen(ctor.prototype)) {
-      try {
-        freeze(ctor.prototype);
-      } catch (e) {
-        // Some environments may not allow freezing prototypes
-        // Suppress expected errors (read-only properties, cyclic proto, etc.)
-      }
-    }
-  }
-
-  // Freeze Math and JSON (best effort)
-  if (!isFrozen(Math)) {
-    try {
-      freeze(Math);
-    } catch (e) {
-      // Already frozen or environment prevents it
-    }
-  }
-
-  if (!isFrozen(JSON)) {
-    try {
-      freeze(JSON);
-    } catch (e) {
-      // Already frozen or environment prevents it
-    }
-  }
-
-  console.log('[Determinism] Primordials frozen');
 }
 
 /**
@@ -209,7 +217,7 @@ function removeNonDeterministicAPIs() {
  * @param {Object} options - Configuration options
  * @param {number} [options.seed=0x9e3779b1] - Seed for Math.random()
  * @param {number} [options.fixedTime=1700000000000] - Fixed timestamp for Date.now()
- * @param {boolean} [options.freezePrimordials=true] - Whether to freeze built-ins
+ * @param {string[]} [options.hardenGlobals=[]] - Global names to harden (make non-configurable/non-writable)
  * @param {boolean} [options.removeTimers=true] - Whether to remove timing APIs
  * @returns {Object} Information about hardening applied
  */
@@ -217,7 +225,7 @@ export function hardenRealm(options = {}) {
   const {
     seed = 0x9e3779b1,
     fixedTime = 1700000000000, // ~2023-11-15
-    freezePrimordials: shouldFreeze = true,
+    hardenGlobals = [],
     removeTimers = true,
   } = options;
 
@@ -225,8 +233,8 @@ export function hardenRealm(options = {}) {
   const results = {
     deterministicRandom: false,
     deterministicDate: false,
-    frozenPrimordials: false,
-    removedAPIs: [],
+    hardenedGlobals: [] as string[],
+    removedAPIs: [] as string[],
   };
 
   console.log('[Determinism] Hardening realm...');
@@ -238,7 +246,7 @@ export function hardenRealm(options = {}) {
     results.deterministicRandom = true;
     console.log(`[Determinism] Math.random seeded with 0x${seed.toString(16)}`);
   } catch (e) {
-    console.warn('[Determinism] Could not replace Math.random:', e.message);
+    console.warn('[Determinism] Could not replace Math.random:', (e as any).message);
   }
 
   // 2. Replace Date with deterministic version
@@ -248,16 +256,16 @@ export function hardenRealm(options = {}) {
     results.deterministicDate = true;
     console.log(`[Determinism] Date.now() fixed to ${fixedTime}`);
   } catch (e) {
-    console.warn('[Determinism] Could not replace Date:', e.message);
+    console.warn('[Determinism] Could not replace Date:', (e as any).message);
   }
 
-  // 3. Freeze primordials
-  if (shouldFreeze) {
-    try {
-      freezePrimordials();
-      results.frozenPrimordials = true;
-    } catch (e) {
-      console.warn('[Determinism] Could not freeze primordials:', e.message);
+  // 3. Harden specified global surfaces
+  if (hardenGlobals.length > 0) {
+    for (const globalName of hardenGlobals) {
+      if (hardenGlobalSurface(globalName)) {
+        results.hardenedGlobals.push(globalName);
+        console.log(`[Determinism] Hardened global: ${globalName}`);
+      }
     }
   }
 
@@ -267,7 +275,7 @@ export function hardenRealm(options = {}) {
       removeNonDeterministicAPIs();
       results.removedAPIs = ['setTimeout', 'setInterval', 'performance.now'];
     } catch (e) {
-      console.warn('[Determinism] Could not remove APIs:', e.message);
+      console.warn('[Determinism] Could not remove APIs:', (e as any).message);
     }
   }
 
@@ -374,5 +382,5 @@ export function createCompartment(endowments = {}) {
 export const __test__ = {
   createDeterministicRandom,
   createDeterministicDate,
-  freezePrimordials,
+  hardenGlobalSurface,
 };

@@ -28,7 +28,7 @@ export default defineConfig({
         "default-src 'self'",                    // Only load resources from our origin
         "script-src 'self' 'unsafe-inline'",     // Allow inline scripts for Vite HMR
         "connect-src 'self' http://localhost:3010 ws://localhost:* https://rpc.testnet.near.org https://rpc.mainnet.near.org", // Allow enclave, HMR, and NEAR RPC
-        "worker-src http://localhost:8081",      // Allow cross-origin worker (different port from iframe)
+        "worker-src http://localhost:3010",      // Allow cross-origin worker (same port as iframe)
         "frame-src 'self' http://localhost:3010", // Allow cross-origin iframe (iframe backend uses port 3010)
         "child-src 'self' http://localhost:3010", // Legacy fallback for frame-src
         "style-src 'self' 'unsafe-inline'",      // Allow inline styles for demo

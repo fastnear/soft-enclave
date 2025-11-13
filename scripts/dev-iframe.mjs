@@ -27,4 +27,4 @@ run('node', ['enclave-server.js'], {
     HOST_ORIGIN: 'http://localhost:3000'
   }
 });
-run('npm', ['run', 'dev']);
+run('npm', ['run', 'dev:vite']);

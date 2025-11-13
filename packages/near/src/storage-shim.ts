@@ -84,8 +84,20 @@ const near = Object.freeze({
   }
 });
 
-// Make near globally available
+// Make near globally available and harden it
 globalThis.near = near;
+
+// Lock the 'near' global to prevent reassignment
+try {
+  Object.defineProperty(globalThis, 'near', {
+    value: near,
+    enumerable: true,
+    configurable: false,
+    writable: false
+  });
+} catch (e) {
+  // Already defined or locked - acceptable
+}
 `;
     },
 

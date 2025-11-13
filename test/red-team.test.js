@@ -185,7 +185,7 @@ describe('Red Team: Cross-Origin Defense Verification', () => {
       await enclave.initialize();
 
       // Even with hooks installed, worker's memory is NOT captured on host side
-      // because it's in a different origin (localhost:8081 vs localhost:3000)
+      // because it's in a different origin (localhost:3010 vs localhost:3000)
 
       console.log('[Defense] Memories captured on host side:', capturedMemories.length);
       console.log('[Defense] Buffers captured on host side:', capturedBuffers.length);
@@ -212,7 +212,7 @@ describe('Red Team: Cross-Origin Defense Verification', () => {
     // Conceptual test: Document the security guarantee
 
     const hostOrigin = 'http://localhost:3000';
-    const workerOrigin = 'http://localhost:8081';
+    const workerOrigin = 'http://localhost:3010';
 
     // Different ports = different origins
     expect(hostOrigin).not.toBe(workerOrigin);

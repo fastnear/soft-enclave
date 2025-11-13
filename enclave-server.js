@@ -52,12 +52,12 @@ function getSecurityHeaders() {
     'Cross-Origin-Opener-Policy': 'same-origin',
     'Cross-Origin-Embedder-Policy': 'require-corp',
 
-    // Content Security Policy - RELAXED FOR DEBUGGING
+    // Content Security Policy - STRICT (deny-by-default, explicit allows)
     'Content-Security-Policy': [
-      "default-src 'self'",           // Allow resources from same origin
+      "default-src 'none'",           // Deny everything by default (most secure)
       "script-src 'self' 'wasm-unsafe-eval'", // Allow WASM compilation (QuickJS)
       "style-src 'self' 'unsafe-inline'", // Allow inline styles for debugging
-      "connect-src 'self' data:",     // Allow connections to our origin + data URLs (QuickJS WASM)
+      "connect-src 'self' data:",     // Allow connections + data URLs (QuickJS WASM inline)
       "worker-src 'self'",            // Only allow workers from our origin
       `frame-ancestors ${hostOrigin}`, // Only allow embedding from expected parent
       "base-uri 'none'",              // Prevent base tag injection

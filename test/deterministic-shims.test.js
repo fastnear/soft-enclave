@@ -163,13 +163,13 @@ describe('hardenRealm()', () => {
 
   it('should replace Math.random with deterministic version', () => {
     const seed = 0xabcdef01;
-    hardenRealm({ seed, freezePrimordials: false });
+    hardenRealm({ seed });
 
     const values = Array(10).fill(0).map(() => Math.random());
 
     // Should be deterministic - second run should produce same values
     Math.random = originalRandom; // Reset
-    hardenRealm({ seed, freezePrimordials: false });
+    hardenRealm({ seed });
 
     const values2 = Array(10).fill(0).map(() => Math.random());
 
@@ -180,7 +180,7 @@ describe('hardenRealm()', () => {
 
   it('should fix Date.now() to constant value', () => {
     const fixedTime = 1234567890000;
-    hardenRealm({ fixedTime, freezePrimordials: false });
+    hardenRealm({ fixedTime });
 
     expect(Date.now()).toBe(fixedTime);
     expect(Date.now()).toBe(fixedTime);
@@ -188,15 +188,31 @@ describe('hardenRealm()', () => {
     console.log('[Determinism] Date.now() is fixed');
   });
 
-  it('should freeze primordials', () => {
-    hardenRealm({ freezePrimordials: true });
+  it('should harden specified global surfaces', () => {
+    // Set up test globals
+    globalThis.testAPI = { secure: true };
+    globalThis.testVault = { data: 'sensitive' };
 
-    // Should not be able to modify Object.prototype
-    expect(() => {
-      Object.prototype.malicious = 'pwned';
-    }).toThrow();
+    // Harden them
+    const results = hardenRealm({
+      hardenGlobals: ['testAPI', 'testVault'],
+      removeTimers: false
+    });
 
-    console.log('[Determinism] Primordials are frozen');
+    // Verify results
+    expect(results.hardenedGlobals).toContain('testAPI');
+    expect(results.hardenedGlobals).toContain('testVault');
+
+    // Verify property descriptors
+    const testAPIDesc = Object.getOwnPropertyDescriptor(globalThis, 'testAPI');
+    expect(testAPIDesc.configurable).toBe(false);
+    expect(testAPIDesc.writable).toBe(false);
+
+    const testVaultDesc = Object.getOwnPropertyDescriptor(globalThis, 'testVault');
+    expect(testVaultDesc.configurable).toBe(false);
+    expect(testVaultDesc.writable).toBe(false);
+
+    console.log('[Determinism] Global surfaces are hardened');
   });
 
   it('should remove timing APIs', () => {
@@ -205,7 +221,7 @@ describe('hardenRealm()', () => {
 
     const originalSetTimeout = globalThis.setTimeout;
 
-    hardenRealm({ removeTimers: true, freezePrimordials: false });
+    hardenRealm({ removeTimers: true });
 
     // If they were removed, they should be undefined
     // (But test framework might restore them)
@@ -221,17 +237,20 @@ describe('hardenRealm()', () => {
   });
 
   it('should return results object', () => {
+    globalThis.testGlobal1 = { test: 'value' };
+
     const results = hardenRealm({
       seed: 0x12345678,
       fixedTime: 1700000000000,
-      freezePrimordials: true,
+      hardenGlobals: ['testGlobal1'],
       removeTimers: true,
     });
 
     expect(results).toHaveProperty('deterministicRandom');
     expect(results).toHaveProperty('deterministicDate');
-    expect(results).toHaveProperty('frozenPrimordials');
+    expect(results).toHaveProperty('hardenedGlobals');
     expect(results).toHaveProperty('removedAPIs');
+    expect(results.hardenedGlobals).toContain('testGlobal1');
 
     console.log('[Determinism] Hardening results:', results);
   });
@@ -359,7 +378,7 @@ describe('Compartment (Simplified SES)', () => {
 
 describe('Real-World Determinism Test', () => {
   it('should execute same code deterministically across runs', async () => {
-    const guestCode = `
+    const guestCode = `(() => {
       function fibonacci(n) {
         if (n <= 1) return n;
         return fibonacci(n - 1) + fibonacci(n - 2);
@@ -377,24 +396,24 @@ describe('Real-World Determinism Test', () => {
         return (4 * inside) / samples;
       }
 
-      ({
+      return {
         fib: fibonacci(20),
         pi: monteCarloPi(10000),
         date: Date.now(),
-      })
-    `;
+      };
+    })()`;
 
     // Run 1
     const seed = 0x11223344;
     const fixedTime = 1700000000000;
-    hardenRealm({ seed, fixedTime, freezePrimordials: false });
+    hardenRealm({ seed, fixedTime });
 
-    const run1 = eval(`(${guestCode})`);
+    const run1 = eval(guestCode);
 
     // Run 2 (re-harden with same parameters)
-    hardenRealm({ seed, fixedTime, freezePrimordials: false });
+    hardenRealm({ seed, fixedTime });
 
-    const run2 = eval(`(${guestCode})`);
+    const run2 = eval(guestCode);
 
     // Results should be identical
     expect(run1).toEqual(run2);
@@ -407,23 +426,23 @@ describe('Real-World Determinism Test', () => {
   });
 
   it('should produce different results with different seeds', async () => {
-    const monteCarloCode = `
+    const monteCarloCode = `(() => {
       let inside = 0;
       for (let i = 0; i < 1000; i++) {
         const x = Math.random();
         const y = Math.random();
         if (x * x + y * y <= 1) inside++;
       }
-      (4 * inside) / 1000
-    `;
+      return (4 * inside) / 1000;
+    })()`;
 
     // Run with seed 1
-    hardenRealm({ seed: 0x11111111, freezePrimordials: false });
-    const pi1 = eval(`(${monteCarloCode})`);
+    hardenRealm({ seed: 0x11111111 });
+    const pi1 = eval(monteCarloCode);
 
     // Run with seed 2
-    hardenRealm({ seed: 0x22222222, freezePrimordials: false });
-    const pi2 = eval(`(${monteCarloCode})`);
+    hardenRealm({ seed: 0x22222222 });
+    const pi2 = eval(monteCarloCode);
 
     // Different seeds should produce different (but deterministic) results
     expect(pi1).not.toBe(pi2);
@@ -434,56 +453,57 @@ describe('Real-World Determinism Test', () => {
   });
 });
 
-describe('Security: Prototype Poisoning Prevention', () => {
-  let restoreConsole;
+describe('Security: Global Surface Immutability', () => {
+  it('should prevent reassignment of hardened globals', () => {
+    globalThis.secureAPI = { credentials: 'secret' };
+    const { hardenGlobalSurface } = __test__;
 
-  beforeAll(() => {
-    // Mute expected console noise from freezing primordials
-    const restoreErrors = muteConsoleErrors([
-      /read[-\s]?only property/i,
-      /Cannot assign to read only/i
-    ]);
-    const restoreWarns = muteConsoleWarns([
-      /Could not freeze/i
-    ]);
-    restoreConsole = () => {
-      restoreErrors();
-      restoreWarns();
-    };
-  });
+    expect(hardenGlobalSurface('secureAPI')).toBe(true);
 
-  afterAll(() => {
-    restoreConsole?.();
-  });
-
-  it('should prevent Object.prototype modification', () => {
-    hardenRealm({ freezePrimordials: true });
-
-    // Attempt prototype poisoning
+    // In strict mode, reassignment should throw
     expect(() => {
-      Object.prototype.toString = () => 'hacked';
+      'use strict';
+      globalThis.secureAPI = 'hacked';
     }).toThrow();
 
-    console.log('[Security] ✓ Prototype poisoning blocked');
+    console.log('[Security] ✓ Global reassignment blocked');
   });
 
-  it('should prevent Array.prototype modification', () => {
-    hardenRealm({ freezePrimordials: true });
+  it('should prevent deletion of hardened globals', () => {
+    globalThis.protectedAPI = { data: 'important' };
+    const { hardenGlobalSurface } = __test__;
 
+    hardenGlobalSurface('protectedAPI');
+
+    // Cannot delete non-configurable property
     expect(() => {
-      Array.prototype.map = () => 'pwned';
+      delete globalThis.protectedAPI;
     }).toThrow();
 
-    console.log('[Security] ✓ Array.prototype poisoning blocked');
+    console.log('[Security] ✓ Global deletion blocked');
   });
 
-  it('should prevent Function.prototype modification', () => {
-    hardenRealm({ freezePrimordials: true });
+  it('should harden global with Object.defineProperty', () => {
+    globalThis.vaultAPI = { secrets: 'protected' };
+    const { hardenGlobalSurface } = __test__;
 
-    expect(() => {
-      Function.prototype.call = () => 'malicious';
-    }).toThrow();
+    hardenGlobalSurface('vaultAPI');
 
-    console.log('[Security] ✓ Function.prototype poisoning blocked');
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'vaultAPI');
+    expect(descriptor.configurable).toBe(false);
+    expect(descriptor.writable).toBe(false);
+    expect(descriptor.enumerable).toBe(true);
+    expect(descriptor.value).toEqual({ secrets: 'protected' });
+
+    console.log('[Security] ✓ Global hardened with correct descriptor');
+  });
+
+  it('should handle missing globals gracefully', () => {
+    const { hardenGlobalSurface } = __test__;
+
+    // Should return false for non-existent global
+    expect(hardenGlobalSurface('nonExistentGlobal')).toBe(false);
+
+    console.log('[Security] ✓ Missing globals handled gracefully');
   });
 });

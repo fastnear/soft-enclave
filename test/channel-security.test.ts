@@ -20,7 +20,7 @@ describe('Secure Channel - Origin Validation', () => {
     // This is a CRITICAL security boundary
     // If this fails, cross-origin attacks are possible
 
-    const expectedOrigin = 'http://localhost:8081';
+    const expectedOrigin = 'http://localhost:3010';
     const attackerOrigin = 'http://evil.com';
 
     // Simulate message event from wrong origin
@@ -37,7 +37,7 @@ describe('Secure Channel - Origin Validation', () => {
   });
 
   it('MUST accept messages only from exact expected origin', () => {
-    const expectedOrigin = 'http://localhost:8081';
+    const expectedOrigin = 'http://localhost:3010';
 
     // Legitimate message
     const goodMessage = {
@@ -49,15 +49,15 @@ describe('Secure Channel - Origin Validation', () => {
   });
 
   it('MUST NOT be fooled by origin substring attacks', () => {
-    const expectedOrigin = 'http://localhost:8081';
+    const expectedOrigin = 'http://localhost:3010';
 
     // Attacker tries to include expected origin in their domain
     const attackOrigins = [
-      'http://localhost:8081.evil.com',
-      'http://evil-localhost:8081.com',
-      'http://localhost:8081/',  // Trailing slash
-      'http://localhost:8081#',  // Fragment
-      'http://user@localhost:8081' // Userinfo
+      'http://localhost:3010.evil.com',
+      'http://evil-localhost:3010.com',
+      'http://localhost:3010/',  // Trailing slash
+      'http://localhost:3010#',  // Fragment
+      'http://user@localhost:3010' // Userinfo
     ];
 
     attackOrigins.forEach((attackOrigin) => {
@@ -260,7 +260,7 @@ describe('Secure Channel - Random IV Generation', () => {
 describe('Secure Channel - Defense in Depth', () => {
   it('demonstrates 5 independent security layers', () => {
     // Layer 1: Origin check
-    const originValid = 'http://localhost:8081' === 'http://localhost:8081';
+    const originValid = 'http://localhost:3010' === 'http://localhost:3010';
 
     // Layer 2: Channel ID binding (via AAD)
     const channelIdMatch = 'id=abc123' === 'id=abc123';

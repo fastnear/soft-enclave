@@ -11,7 +11,7 @@ describe('End-to-End Integration: Context-Bound Sessions + AAD', () => {
   it('initializes and evaluates code with AAD-bound ciphertexts', async () => {
     // This block will execute only when RUN_E2E=1
     enclave = new HybridSecureEnclave({
-      workerUrl: 'http://localhost:8081/enclave-worker.js',
+      workerUrl: 'http://localhost:3010/enclave-worker.js',
       wasmModule: null // Will be loaded by worker
     });
 
