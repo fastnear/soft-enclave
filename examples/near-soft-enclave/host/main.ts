@@ -1,7 +1,7 @@
 import { createHostChannel } from '../libs/secure-channel.js';
 import { makeEgressGuard } from '@fastnear/soft-enclave-near';
 
-const enclaveSrc = (window as any).ENCLAVE_ORIGIN ?? 'http://localhost:8081';
+const enclaveSrc = (window as any).ENCLAVE_ORIGIN ?? 'http://localhost:3010';
 const targetOrigin = new URL(enclaveSrc).origin;
 
 const iframe = document.getElementById('enclave') as HTMLIFrameElement;

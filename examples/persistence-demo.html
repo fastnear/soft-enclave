@@ -237,9 +237,99 @@
         grid-template-columns: 1fr;
       }
     }
+  
+    /* Demo Navigation - Tailwind-inspired */
+    .demo-nav {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+
+    .demo-nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+
+    .demo-nav-list {
+      display: flex;
+      gap: 0;
+      margin: 0;
+      list-style: none;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .demo-nav-item {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .demo-nav-link {
+      display: flex;
+      flex-direction: column;
+      padding: 1rem 1.5rem;
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+
+    .demo-nav-link:hover {
+      color: #374151;
+      background-color: #f9fafb;
+    }
+
+    .demo-nav-link.active {
+      color: #7c3aed;
+      border-bottom-color: #7c3aed;
+    }
+
+    .demo-nav-title {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .demo-nav-description {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      font-weight: 400;
+    }
   </style>
 </head>
 <body>
+  <nav class="demo-nav">
+    <div class="demo-nav-container">
+      <ul class="demo-nav-list">
+        <li class="demo-nav-item">
+          <a href="/" class="demo-nav-link">
+            <span class="demo-nav-title">Interactive Playground</span>
+            <span class="demo-nav-description">Main demo with code editor</span>
+          </a>
+        </li>
+        <li class="demo-nav-item">
+          <a href="/demo/test-runner.html" class="demo-nav-link">
+            <span class="demo-nav-title">Security Tests</span>
+            <span class="demo-nav-description">Visual property verification</span>
+          </a>
+        </li>
+        <li class="demo-nav-item">
+          <a href="/examples/persistence-demo.html" class="demo-nav-link active">
+            <span class="demo-nav-title">Persistence</span>
+            <span class="demo-nav-description">Key custody & storage</span>
+          </a>
+        </li>
+        <li class="demo-nav-item">
+          <a href="/demo/examples/mode-comparison.html" class="demo-nav-link">
+            <span class="demo-nav-title">Backend Comparison</span>
+            <span class="demo-nav-description">Worker vs iframe performance</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
   <div class="container">
     <h1>Soft Enclave - Persistence Demo</h1>
     <p class="subtitle">WebCrypto-based key custody with IndexedDB storage</p>

@@ -54,7 +54,7 @@ These metrics are exposed to users and logged.
 - **Location**: `src/backends/iframe/`
 - **Isolation**: Cross-origin iframe + MessageChannel
 - **Protocol**: Simple ECDH+HKDF (default), Advanced available
-- **Entry**: Port 8081 (npm run serve:iframe)
+- **Entry**: Port 3010 (npm run serve:iframe)
 - **Features**: Explicit egress guard, works with strict CSP, easier debugging
 - **Best for**: Production (CSP-compatible), development, security demos
 
@@ -62,8 +62,8 @@ These metrics are exposed to users and logged.
 - **Location**: `src/backends/worker-backend.js`
 - **Isolation**: Cross-origin Web Worker via Blob URL
 - **Protocol**: Advanced (v1.1) with transcript binding
-- **Entry**: Port 8081 (npm run serve:enclave)
-- **CSP Requirement**: Must allow `worker-src blob:` or `worker-src http://localhost:8081 blob:`
+- **Entry**: Port 3010 (npm run serve:enclave)
+- **CSP Requirement**: Must allow `worker-src blob:` or `worker-src http://localhost:3010 blob:`
 - **Best for**: Environments with relaxed CSP, performance-critical scenarios
 
 ### Unified Factory API
@@ -220,6 +220,52 @@ soft-enclave/
 - `tweetnacl` (^1.0.3) - Ed25519 signing
 - WebCrypto API (browser built-in)
 
+### ADR-006: Immutable Global Surfaces Over Primordial Freezing
+
+**Decision**: Use `Object.defineProperty(globalThis, 'X', { configurable: false, writable: false })` to harden specific API surfaces instead of freezing JavaScript primordials (Object.prototype, Array.prototype, etc.)
+
+**Rationale**:
+- **Test compatibility**: Freezing primordials conflicted with Vitest and build tool internals, causing unhandled errors during module collection
+- **Zero production usage**: No production code used `freezePrimordials` option - it was test-only
+- **Already established pattern**: The tsup.config.ts already uses this approach for the `SoftEnclave` global
+- **Clearer security model**: "Our API is immutable" vs. "JavaScript is immutable" - more honest about what we can guarantee
+- **Simpler implementation**: Less code, fewer edge cases, easier to maintain
+- **Aligned with threat model**: In browser environments, hardening specific API surfaces provides practical security without fighting the runtime
+
+**Implementation**:
+- `packages/shared/src/deterministic-shims.ts`:
+  - Added `hardenGlobalSurface(name: string)` function
+  - Removed `freezePrimordials()` function
+  - Updated `hardenRealm()` signature: `hardenGlobals: string[]` instead of `freezePrimordials: boolean`
+  - Updated return type: `hardenedGlobals: string[]` instead of `frozenPrimordials: boolean`
+- `packages/near/src/storage-shim.ts`:
+  - Applied hardening pattern to `near` global
+- `test/deterministic-shims.test.js`:
+  - Replaced 5 primordial freezing tests with 4 global surface immutability tests
+  - New suite: "Security: Global Surface Immutability"
+
+**Pattern**:
+```javascript
+Object.defineProperty(globalThis, 'near', {
+  value: near,
+  enumerable: true,
+  configurable: false,  // Cannot be deleted or redefined
+  writable: false       // Cannot be reassigned
+});
+```
+
+**Benefits**:
+- ✅ Clean test runs (exit code 0, no unhandled errors)
+- ✅ Works with all build tools and test runners
+- ✅ Same security properties for our API surfaces
+- ✅ More maintainable and easier to explain
+- ✅ Honest about browser security limitations
+
+**Trade-offs**:
+- Does not prevent modification of built-in prototypes (but neither did the old approach in practice - it just broke tests)
+- Focuses on protecting our APIs rather than the entire JavaScript realm
+- More aligned with realistic browser security model
+
 ### When to Use Which Backend
 
 | Use Case | Backend | Why |
@@ -238,11 +284,11 @@ npm install
 
 # Development - Worker Backend (requires 2 terminals)
 npm run dev              # Terminal 1: Host app (localhost:3000)
-npm run serve:enclave    # Terminal 2: Worker (localhost:8081)
+npm run serve:enclave    # Terminal 2: Worker (localhost:3010)
 
 # Development - iframe Backend (requires 2 terminals)
 npm run dev              # Terminal 1: Host app (localhost:3000)
-npm run serve:iframe     # Terminal 2: iframe enclave (localhost:8081)
+npm run serve:iframe     # Terminal 2: iframe enclave (localhost:3010)
 
 # Testing
 npm test                 # Run all tests
@@ -306,7 +352,7 @@ process.env.HOST_ORIGIN = 'https://yourdomain.com'
 
 The worker backend requires `blob:` in CSP:
 ```javascript
-"worker-src http://localhost:8081 blob:"  // Required for Blob URL loading
+"worker-src http://localhost:3010 blob:"  // Required for Blob URL loading
 ```
 
 This is **stricter** than iframe backend, hence iframe is the default.

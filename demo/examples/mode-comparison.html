@@ -122,6 +122,36 @@
   </style>
 </head>
 <body>
+  <nav class="demo-nav">
+    <div class="demo-nav-container">
+      <ul class="demo-nav-list">
+        <li class="demo-nav-item">
+          <a href="/" class="demo-nav-link">
+            <span class="demo-nav-title">Interactive Playground</span>
+            <span class="demo-nav-description">Main demo with code editor</span>
+          </a>
+        </li>
+        <li class="demo-nav-item">
+          <a href="/demo/test-runner.html" class="demo-nav-link">
+            <span class="demo-nav-title">Security Tests</span>
+            <span class="demo-nav-description">Visual property verification</span>
+          </a>
+        </li>
+        <li class="demo-nav-item">
+          <a href="/examples/persistence-demo.html" class="demo-nav-link">
+            <span class="demo-nav-title">Persistence</span>
+            <span class="demo-nav-description">Key custody & storage</span>
+          </a>
+        </li>
+        <li class="demo-nav-item">
+          <a href="/demo/examples/mode-comparison.html" class="demo-nav-link active">
+            <span class="demo-nav-title">Backend Comparison</span>
+            <span class="demo-nav-description">Worker vs iframe performance</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
   <div class="container">
     <h1>⚖️ Backend Comparison: Worker vs iframe</h1>
     <p>Compare performance and behavior of both isolation backends side-by-side.</p>
@@ -157,8 +187,8 @@
         </tr>
         <tr>
           <td><strong>Port</strong></td>
-          <td>8081</td>
-          <td>8091</td>
+          <td>3010</td>
+          <td>3010</td>
         </tr>
       </tbody>
     </table>
@@ -255,7 +285,7 @@
 
         iframeEnclave = createEnclave({
           mode: EnclaveMode.IFRAME,
-          enclaveOrigin: 'http://localhost:8091'
+          enclaveOrigin: 'http://localhost:3010'
         });
 
         await iframeEnclave.initialize();
@@ -273,7 +303,7 @@
           'Init Time': `${duration.toFixed(0)}ms`
         });
       } catch (error) {
-        status.innerHTML = `<div class="status error">✗ Failed: ${error.message}<br><small>Make sure iframe server is running on port 8091</small></div>`;
+        status.innerHTML = `<div class="status error">✗ Failed: ${error.message}<br><small>Make sure enclave server is running on port 3010</small></div>`;
         btn.disabled = false;
       }
     });

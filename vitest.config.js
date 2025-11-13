@@ -29,16 +29,6 @@ export default defineConfig({
       ...(runHPKE ? [] : ['test/hpke-protocol.test.js'])
     ],
 
-    // Suppress expected uncaught errors from primordial freezing
-    onUncaughtException(error) {
-      if (error && error.message && error.message.includes("Cannot assign to read only property 'constructor'")) {
-        // Expected error during Object.freeze() - safe to ignore
-        return;
-      }
-      // Log unexpected errors
-      console.error('Uncaught exception:', error);
-    },
-
     // Coverage configuration
     coverage: {
       reporter: ['text', 'json', 'html'],

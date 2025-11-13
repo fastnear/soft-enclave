@@ -32,7 +32,7 @@ describe('End-to-End Integration: Context-Bound Sessions + AAD', () => {
 
   it('should establish context-bound session with code hash', async () => {
     enclave = await createEnclave({
-      workerUrl: 'http://localhost:8081/enclave-worker.js'
+      workerUrl: 'http://localhost:3010/enclave-worker.js'
     });
 
     await enclave.initialize();
@@ -149,7 +149,7 @@ describe('End-to-End Integration: Context-Bound Sessions + AAD', () => {
   it('should have different session keys for different contexts', async () => {
     // Create a second enclave instance (same worker URL)
     const enclave2 = await createEnclave({
-      workerUrl: 'http://localhost:8081/enclave-worker.js'
+      workerUrl: 'http://localhost:3010/enclave-worker.js'
     });
 
     try {
@@ -208,7 +208,7 @@ describe('Security Properties: AAD and Context Binding', () => {
 
     const ctx = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'test-hash'
     };
 
@@ -257,13 +257,13 @@ describe('Security Properties: AAD and Context Binding', () => {
     // Same keys, different contexts
     const ctx1 = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'hash-v1'
     };
 
     const ctx2 = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'hash-v2' // Different code hash
     };
 

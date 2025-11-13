@@ -23,21 +23,15 @@ yarn install
 # Build all packages (required before first run)
 yarn build
 
-# Choose one of these options:
-
-# Option 1: Run both servers together (RECOMMENDED)
-yarn dev:iframe  # Runs both host (3000) and enclave (3010)
-
-# Option 2: Run servers separately
-# Terminal 1 - Host app
+# Start development (runs both servers automatically)
 yarn dev  # Opens at http://localhost:3000
 
-# Terminal 2 - Enclave server (choose one):
-# For iframe backend (default, CSP-compatible):
-ENCLAVE_PORT=3010 HOST_ORIGIN=http://localhost:3000 node enclave-server.js
+# Alternative: Run servers separately for debugging
+# Terminal 1 - Main app only
+yarn dev:vite
 
-# For worker backend (requires blob: in CSP):
-yarn dev:worker  # Also runs on port 3010
+# Terminal 2 - Enclave server only
+yarn dev:worker  # Runs on port 3010
 ```
 
 Visit http://localhost:3000 to see:
@@ -50,6 +44,8 @@ Visit http://localhost:3000 to see:
 - `3010` - Enclave server (used by both iframe and worker backends)
 
 ## Basic Usage
+
+**New to soft-enclave?** See the **[Integration Guide](docs/INTEGRATION.md)** for step-by-step instructions to integrate into your app (< 30 minutes).
 
 ### Getting Started
 
@@ -125,7 +121,11 @@ const { result } = await enclave.execute(`
 
 ## Architecture
 
-See also [ARCHITECTURE.md](ARCHITECTURE.md).
+**Documentation**:
+- **[Integration Guide](docs/INTEGRATION.md)** - Complete step-by-step integration guide
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical architecture details
+- [THREAT_MODEL.md](docs/THREAT_MODEL.md) - Security properties and limitations
+- [PERSISTENCE.md](docs/PERSISTENCE.md) - Key custody and storage
 
 ### Dual Backend Support (Choose One!)
 
@@ -146,7 +146,7 @@ const enclave = createEnclave();
 import { createEnclave, EnclaveMode } from '@fastnear/soft-enclave';
 const enclave = createEnclave({
   mode: EnclaveMode.WORKER,
-  workerUrl: 'http://localhost:8081/enclave-worker.js'
+  workerUrl: 'http://localhost:3010/enclave-worker.js'
 });
 ```
 
@@ -267,28 +267,6 @@ Interactive demonstration of key custody and encrypted storage.
 
 ---
 
-### 🔢 NEAR Counter Demo
-**Location**: `http://localhost:3000/demo/examples/near-counter.html`
-
-Simulates a NEAR smart contract with persistent storage.
-
-**How It Works**:
-```javascript
-// Contract maintains a counter in storage
-near.storageWrite('counter', (current + 1).toString());
-
-// Next execution can read the state
-const counter = parseInt(near.storageRead('counter') || '0');
-```
-
-**Try It**:
-- Increment/decrement the counter
-- Reset to zero
-- Watch gas usage simulation
-- See how contract state persists between executions
-
----
-
 ### ⚖️ Mode Comparison Demo
 **Location**: `http://localhost:3000/demo/examples/mode-comparison.html`
 
@@ -375,7 +353,6 @@ await enclave.execute(`return context.myVar;`, context); // 42
 - **Main Demo** (`/`) - Interactive playground, try anything
 - **Test Runner** (`/demo/test-runner.html`) - Proves security properties work
 - **Persistence Demo** (`/examples/persistence-demo.html`) - Key/data storage (not JS state!)
-- **NEAR Counter** (`/demo/examples/near-counter.html`) - Simulated smart contract
 - **Mode Comparison** (`/demo/examples/mode-comparison.html`) - iframe vs Worker
 
 ### "How secure is this really?"

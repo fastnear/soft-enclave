@@ -120,7 +120,7 @@ describe('Context-Bound Session Derivation', () => {
 
     const ctx = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'test-hash-v1'
     };
 
@@ -147,13 +147,13 @@ describe('Context-Bound Session Derivation', () => {
 
     const ctx1 = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'v1'
     };
 
     const ctx2 = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'v2' // Different code hash
     };
 
@@ -170,8 +170,8 @@ describe('Context-Bound Session Derivation', () => {
     const keyPair1 = await generateECDHKeyPair();
     const keyPair2 = await generateECDHKeyPair();
 
-    const ctx1 = { hostOrigin: 'http://localhost:3000', enclaveOrigin: 'http://localhost:8081', codeHash: 'v1' };
-    const ctx2 = { hostOrigin: 'http://attacker.com', enclaveOrigin: 'http://localhost:8081', codeHash: 'v1' };
+    const ctx1 = { hostOrigin: 'http://localhost:3000', enclaveOrigin: 'http://localhost:3010', codeHash: 'v1' };
+    const ctx2 = { hostOrigin: 'http://attacker.com', enclaveOrigin: 'http://localhost:3010', codeHash: 'v1' };
 
     const session1 = await deriveSessionWithContext(keyPair1.privateKey, keyPair2.publicKey, ctx1);
     const session2 = await deriveSessionWithContext(keyPair1.privateKey, keyPair2.publicKey, ctx2);
@@ -186,7 +186,7 @@ describe('Context-Bound Session Derivation', () => {
     const keyPair1 = await generateECDHKeyPair();
     const keyPair2 = await generateECDHKeyPair();
 
-    const ctx1 = { hostOrigin: 'http://localhost:3000', enclaveOrigin: 'http://localhost:8081', codeHash: 'v1' };
+    const ctx1 = { hostOrigin: 'http://localhost:3000', enclaveOrigin: 'http://localhost:3010', codeHash: 'v1' };
     const ctx2 = { hostOrigin: 'http://localhost:3000', enclaveOrigin: 'http://evil.com', codeHash: 'v1' };
 
     const session1 = await deriveSessionWithContext(keyPair1.privateKey, keyPair2.publicKey, ctx1);
@@ -235,7 +235,7 @@ describe('Counter-Based Encryption/Decryption', () => {
 
     const ctx = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'test'
     };
 
@@ -382,7 +382,7 @@ describe('Real-World Usage Pattern', () => {
     // 3. Both derive session with same context
     const ctx = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'abc123def456'
     };
 
@@ -426,7 +426,7 @@ describe('Real-World Usage Pattern', () => {
     // Legitimate session
     const ctx1 = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'legitimate-v1'
     };
 
@@ -435,7 +435,7 @@ describe('Real-World Usage Pattern', () => {
     // Attacker tries to use different context
     const ctx2 = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'malicious-v2' // Different code hash
     };
 
@@ -457,7 +457,7 @@ describe('Performance Benchmarks', () => {
   it('should benchmark session derivation', async () => {
     const keyPair1 = await generateECDHKeyPair();
     const keyPair2 = await generateECDHKeyPair();
-    const ctx = { hostOrigin: 'http://localhost:3000', enclaveOrigin: 'http://localhost:8081', codeHash: 'test' };
+    const ctx = { hostOrigin: 'http://localhost:3000', enclaveOrigin: 'http://localhost:3010', codeHash: 'test' };
 
     const iterations = 100;
     const start = performance.now();

@@ -89,7 +89,7 @@ describe('Battle-Test 1: Replay Protection', () => {
 
     const ctx = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'test-v1'
     };
 
@@ -137,7 +137,7 @@ describe('Battle-Test 2: Nonce Discipline (No IV Reuse)', () => {
 
     const ctx = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'test-v1'
     };
 
@@ -207,13 +207,13 @@ describe('Battle-Test 3: Context Binding', () => {
 
     const ctx1 = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'v1'
     };
 
     const ctx2 = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'v2' // Different code version
     };
 
@@ -254,13 +254,13 @@ describe('Battle-Test 3: Context Binding', () => {
 
     const ctx1 = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'v1'
     };
 
     const ctx2 = {
       hostOrigin: 'http://malicious.com', // Different origin!
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'v1'
     };
 
@@ -301,7 +301,7 @@ describe('Battle-Test 4: AAD Prevents Message Confusion', () => {
 
     const ctx = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'v1'
     };
 
@@ -347,7 +347,7 @@ describe('Battle-Test 4: AAD Prevents Message Confusion', () => {
 
     const ctx = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'v1'
     };
 
@@ -446,7 +446,7 @@ describe('Battle-Test 6: Performance Under Load', () => {
 
     const ctx = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: 'load-test'
     };
 
@@ -497,8 +497,8 @@ describe('Battle-Test 7: Session Independence', () => {
     const keyPair2 = await generateECDHKeyPair();
 
     // Same key pairs, different contexts
-    const ctx1 = { hostOrigin: 'http://localhost:3000', enclaveOrigin: 'http://localhost:8081', codeHash: 'v1' };
-    const ctx2 = { hostOrigin: 'http://localhost:3000', enclaveOrigin: 'http://localhost:8081', codeHash: 'v2' };
+    const ctx1 = { hostOrigin: 'http://localhost:3000', enclaveOrigin: 'http://localhost:3010', codeHash: 'v1' };
+    const ctx2 = { hostOrigin: 'http://localhost:3000', enclaveOrigin: 'http://localhost:3010', codeHash: 'v2' };
 
     const session1 = await deriveSessionWithContext(keyPair1.privateKey, keyPair2.publicKey, ctx1);
     const session2 = await deriveSessionWithContext(keyPair1.privateKey, keyPair2.publicKey, ctx2);
@@ -538,13 +538,13 @@ describe('Battle-Test 8: Code Hash Binding', () => {
 
     const ctx1 = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: hashV1Hex
     };
 
     const ctx2 = {
       hostOrigin: 'http://localhost:3000',
-      enclaveOrigin: 'http://localhost:8081',
+      enclaveOrigin: 'http://localhost:3010',
       codeHash: hashV2Hex
     };
 

@@ -82,9 +82,9 @@ export class WorkerBackend extends EnclaveBase {
    * @private
    */
   _detectWorkerUrl() {
-    // In development, worker is served on port 8081
+    // In development, worker is served on port 3010 (same as iframe)
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-      return `http://${location.hostname}:8081/enclave-worker.js`;
+      return `http://${location.hostname}:3010/enclave-worker.js`;
     }
 
     // In production, use different subdomain

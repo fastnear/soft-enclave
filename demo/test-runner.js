@@ -191,7 +191,7 @@ async function ensureEnclave(target) {
 
   if (options.mode === EnclaveMode.IFRAME) {
     const params = new URLSearchParams(location.search);
-    const defaultOrigin = params.get('enclaveOrigin') || 'http://localhost:8081';
+    const defaultOrigin = params.get('enclaveOrigin') || 'http://localhost:3010';
     options.enclaveOrigin = defaultOrigin;
   }
 

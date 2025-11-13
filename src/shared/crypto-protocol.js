@@ -162,7 +162,7 @@ function concat(...parts) {
  *
  * const ctx = {
  *   hostOrigin: 'http://localhost:3000',
- *   enclaveOrigin: 'http://localhost:8081',
+ *   enclaveOrigin: 'http://localhost:3010',
  *   codeHash: 'abc123...'
  * };
  *
