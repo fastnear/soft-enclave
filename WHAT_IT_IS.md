@@ -1,8 +1,4 @@
-Here’s how I’d explain this repo to a room of principal engineers.
-
-⸻
-
-0. What this thing is
+# What this thing is
 
 This repo is a browser “soft enclave”:
   •  A host app on one origin (localhost:3000)
