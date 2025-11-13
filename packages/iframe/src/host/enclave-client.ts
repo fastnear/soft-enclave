@@ -24,29 +24,66 @@ export class EnclaveClient {
   }
 
   async boot({ codeHashOverride }: { codeHashOverride?: string } = {}) {
+    console.log('🔵 [EnclaveClient] boot() called, enclaveOrigin:', this.enclaveOrigin);
+
     this.iframe = document.createElement('iframe');
     this.iframe.src = `${this.enclaveOrigin}/boot.html`;
     this.iframe.style.display = 'none';
+    // Security attributes for cross-origin isolation
+    this.iframe.setAttribute('allow', 'cross-origin-isolated');
+    // Allow referrer so enclave can verify parent origin
+    this.iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
     document.body.appendChild(this.iframe);
+    console.log('🔵 [EnclaveClient] iframe created and appended, src:', this.iframe.src);
 
     const { port1, port2 } = new MessageChannel();
     this.port = port1;
     this.port.onmessage = this._onMsg;
+    console.log('🔵 [EnclaveClient] MessageChannel created');
 
-    const ready: any = await new Promise((resolve) => {
+    console.log('🔵 [EnclaveClient] Waiting for enclave-ready message...');
+    const ready: any = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        console.error('❌ [EnclaveClient] Timeout waiting for enclave-ready message!');
+        reject(new Error('Timeout waiting for enclave-ready'));
+      }, 10000);
+
       const onReady = (ev: MessageEvent) => {
-        if (ev.source !== this.iframe!.contentWindow) return;
-        if (ev.origin !== this.enclaveOrigin) return;
-        if (ev.data?.type !== 'enclave-ready') return;
+        console.log('🔵 [EnclaveClient] Received message:', {
+          origin: ev.origin,
+          source: ev.source === this.iframe!.contentWindow ? 'iframe' : 'other',
+          type: ev.data?.type,
+          data: ev.data
+        });
+
+        if (ev.source !== this.iframe!.contentWindow) {
+          console.log('🔵 [EnclaveClient] Ignoring message: source mismatch');
+          return;
+        }
+        if (ev.origin !== this.enclaveOrigin) {
+          console.log('🔵 [EnclaveClient] Ignoring message: origin mismatch', ev.origin, '!==', this.enclaveOrigin);
+          return;
+        }
+        if (ev.data?.type !== 'enclave-ready') {
+          console.log('🔵 [EnclaveClient] Ignoring message: type mismatch', ev.data?.type);
+          return;
+        }
+
+        clearTimeout(timeout);
         window.removeEventListener('message', onReady);
+        console.log('✅ [EnclaveClient] Received enclave-ready message!', ev.data);
         resolve(ev.data);
       };
+
       window.addEventListener('message', onReady);
       this.iframe!.addEventListener('load', () => {
+        console.log('🔵 [EnclaveClient] iframe loaded, sending connect message...');
         this.iframe!.contentWindow!.postMessage({ type: 'connect' }, this.enclaveOrigin, [port2]);
+        console.log('🔵 [EnclaveClient] connect message sent with port2');
       });
     });
 
+    console.log('🔵 [EnclaveClient] Deriving session keys...');
     const enclavePub = await importRaw(new Uint8Array(ready.enclavePubKey));
     const hostKeys = await genECDH();
     const hostPubRaw = await exportRaw(hostKeys.publicKey);
@@ -59,7 +96,9 @@ export class EnclaveClient {
     this.session = await deriveSession(hostKeys.privateKey, enclavePub, ctx);
     this.seq = 1;
 
+    console.log('🔵 [EnclaveClient] Session derived, sending host-hello...');
     this.port.postMessage({ type: 'host-hello', hostPubKey: Array.from(hostPubRaw) });
+    console.log('✅ [EnclaveClient] boot() complete!');
   }
 
   _onMsg(ev: MessageEvent) {

@@ -189,7 +189,7 @@
 
     textarea {
       width: 100%;
-      min-height: 100px;
+      min-height: 200px;
       padding: 0.75rem;
       border: 1px solid #ddd;
       border-radius: 6px;
@@ -202,6 +202,69 @@
       display: flex;
       gap: 1rem;
       margin-top: 1rem;
+      align-items: center;
+    }
+
+    /* Toggle Switch */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+    }
+
+    .toggle-label {
+      font-size: 0.9rem;
+      color: #333;
+      user-select: none;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(24px);
     }
   </style>
 </head>
@@ -241,11 +304,19 @@ function fibonacci(n) {
   return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
-fibonacci(10)
+return fibonacci(10)
         </textarea>
         <div class="button-group">
-          <button id="execute-btn" disabled>Execute Code</button>
+          <button id="fibonacci-btn" disabled>Execute Fibonacci</button>
           <button id="malicious-code-btn" disabled>Try Malicious Code</button>
+          <button id="execute-btn" disabled>Execute Code</button>
+          <div class="toggle-container">
+            <span class="toggle-label">Zero Memory</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="zero-memory-toggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
         </div>
         <div id="execute-result" style="margin-top: 1rem;"></div>
       </div>

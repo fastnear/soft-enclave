@@ -18,6 +18,13 @@ function run(cmd, args, opts = {}) {
   return p;
 }
 
-// Start iframe static server (on 8091) and Vite (host) concurrently.
-run('node', ['enclave-server.js']); // Note: Could be adapted for iframe serving
+// Start iframe enclave server (on 3010) and Vite (host on 3000) concurrently.
+// Set environment variables for proper configuration
+run('node', ['enclave-server.js'], {
+  env: {
+    ...process.env,
+    ENCLAVE_PORT: '3010',
+    HOST_ORIGIN: 'http://localhost:3000'
+  }
+});
 run('npm', ['run', 'dev']);

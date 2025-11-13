@@ -15,19 +15,22 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    strictPort: true, // Fail if port is already in use instead of trying another port
     cors: true,
     headers: {
       // Cross-Origin Isolation for process isolation
       'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'credentialless',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
 
       // Content Security Policy for host origin
       // Less strict than enclave, but still defensive
       'Content-Security-Policy': [
         "default-src 'self'",                    // Only load resources from our origin
         "script-src 'self' 'unsafe-inline'",     // Allow inline scripts for Vite HMR
-        "connect-src 'self' http://localhost:8081 ws://localhost:*", // Allow enclave and HMR
-        "worker-src http://localhost:8081",      // Allow cross-origin worker
+        "connect-src 'self' http://localhost:3010 ws://localhost:* https://rpc.testnet.near.org https://rpc.mainnet.near.org", // Allow enclave, HMR, and NEAR RPC
+        "worker-src http://localhost:8081",      // Allow cross-origin worker (different port from iframe)
+        "frame-src 'self' http://localhost:3010", // Allow cross-origin iframe (iframe backend uses port 3010)
+        "child-src 'self' http://localhost:3010", // Legacy fallback for frame-src
         "style-src 'self' 'unsafe-inline'",      // Allow inline styles for demo
         "img-src 'self' data:",                  // Allow images
         "font-src 'self'",                       // Allow fonts

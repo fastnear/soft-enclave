@@ -153,13 +153,27 @@ async function hashTransaction(serialized: Uint8Array): Promise<Uint8Array> {
  * This uses proper Borsh serialization matching NEAR protocol specification.
  */
 export function serializeTransaction(tx: Transaction): Uint8Array {
-  // Convert hex blockHash to Uint8Array (32 bytes)
-  const blockHashBytes = tx.blockHash.startsWith('0x')
-    ? hexToBytes(tx.blockHash.slice(2))
-    : hexToBytes(tx.blockHash);
+  // Convert blockHash to Uint8Array (32 bytes)
+  // Support both hex format (0x... or plain hex) and base58 format
+  let blockHashBytes: Uint8Array;
+
+  if (tx.blockHash.startsWith('0x')) {
+    // Hex with 0x prefix
+    blockHashBytes = hexToBytes(tx.blockHash.slice(2));
+  } else if (/^[0-9a-fA-F]+$/.test(tx.blockHash) && tx.blockHash.length === 64) {
+    // Plain hex (64 chars = 32 bytes)
+    blockHashBytes = hexToBytes(tx.blockHash);
+  } else {
+    // Assume base58 format (NEAR RPC returns this)
+    try {
+      blockHashBytes = decodeBase58(tx.blockHash);
+    } catch (e) {
+      throw new Error(`Invalid block hash format: not hex or base58: ${e}`);
+    }
+  }
 
   if (blockHashBytes.length !== 32) {
-    throw new Error(`Invalid block hash length: expected 32 bytes, got ${blockHashBytes.length}`);
+    throw new Error(`Invalid block hash length: expected 32 bytes, got ${blockHashBytes.length}. Block hash: ${tx.blockHash}`);
   }
 
   // Parse public key from ed25519:base58 format

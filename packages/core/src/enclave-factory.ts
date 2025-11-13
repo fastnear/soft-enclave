@@ -7,14 +7,14 @@
  * Usage:
  *
  * ```javascript
- * // Worker-based with advanced protocol (default)
+ * // iframe-based with simple protocol (default - works with strict CSP)
  * const enclave = createEnclave();
  *
- * // iframe-based with simple protocol
- * const enclave = createEnclave({ mode: 'iframe', protocol: 'simple' });
+ * // Worker-based with advanced protocol (requires blob: in CSP)
+ * const enclave = createEnclave({ mode: 'worker' });
  *
- * // Worker-based with HPKE protocol
- * const enclave = createEnclave({ mode: 'worker', protocol: 'hpke' });
+ * // iframe-based with advanced protocol
+ * const enclave = createEnclave({ mode: 'iframe', protocol: 'advanced' });
  * ```
  */
 
@@ -98,14 +98,14 @@ export function recommendTier(valueUSD) {
  * @returns {EnclaveBase} Enclave instance
  *
  * @example
- * // Default: worker mode with advanced protocol
+ * // Default: iframe mode with simple protocol (CSP-compatible)
  * const enclave = createEnclave();
  * await enclave.initialize();
  * const result = await enclave.execute('40 + 2');
  *
  * @example
- * // iframe mode with simple protocol
- * const enclave = createEnclave({ mode: 'iframe', protocol: 'simple' });
+ * // Worker mode (requires 'blob:' in worker-src CSP)
+ * const enclave = createEnclave({ mode: 'worker' });
  * await enclave.initialize();
  * const result = await enclave.execute('fibonacci(10)');
  *
@@ -116,8 +116,8 @@ export function recommendTier(valueUSD) {
  */
 export function createEnclave(options: any = {}): Promise<EnclaveBase> {
   const {
-    mode = EnclaveMode.WORKER,
-    protocol = ProtocolType.ADVANCED,
+    mode = EnclaveMode.IFRAME,
+    protocol = ProtocolType.SIMPLE,
     ...backendOptions
   } = options;
 

@@ -21,15 +21,20 @@ class Demo {
       this.initialize();
     });
 
-    // Execute code button
-    document.getElementById('execute-btn').addEventListener('click', () => {
-      const code = document.getElementById('code-input').value;
-      this.executeCode(code);
+    // Execute Fibonacci button
+    document.getElementById('fibonacci-btn').addEventListener('click', () => {
+      this.tryFibonacciCode();
     });
 
     // Malicious code button
     document.getElementById('malicious-code-btn').addEventListener('click', () => {
       this.tryMaliciousCode();
+    });
+
+    // Execute code button (whatever is in textarea)
+    document.getElementById('execute-btn').addEventListener('click', () => {
+      const code = document.getElementById('code-input').value;
+      this.executeCode(code);
     });
 
     // Sign transaction button
@@ -47,19 +52,27 @@ class Demo {
       statusEl.className = 'status pending';
       statusEl.innerHTML = '<div class="spinner"></div><div>Initializing enclave...</div>';
 
-      // Create enclave with worker backend
-      this.enclave = await createEnclave({
-        workerUrl: 'http://localhost:8081/enclave-worker.js'
-      });
+      console.log('🚀 [Demo] Starting enclave initialization...');
+      console.log('🚀 [Demo] Host origin:', window.location.origin);
+      console.log('🚀 [Demo] Expected enclave origin: http://localhost:3010');
 
+      // Create enclave with iframe backend (default - CSP-compatible)
+      // The iframe will be loaded from http://localhost:3010
+      console.log('🚀 [Demo] Creating enclave instance...');
+      this.enclave = await createEnclave();
+      console.log('✅ [Demo] Enclave instance created:', this.enclave);
+
+      console.log('🚀 [Demo] Calling enclave.initialize()...');
       await this.enclave.initialize();
+      console.log('✅ [Demo] Enclave initialized successfully!');
 
       statusEl.className = 'status success';
       statusEl.innerHTML = '<div>✓ Enclave initialized successfully!</div>';
 
       // Enable other buttons
-      document.getElementById('execute-btn').disabled = false;
+      document.getElementById('fibonacci-btn').disabled = false;
       document.getElementById('malicious-code-btn').disabled = false;
+      document.getElementById('execute-btn').disabled = false;
       document.getElementById('sign-btn').disabled = false;
 
       console.log('Enclave initialized:', this.enclave);
@@ -82,21 +95,32 @@ class Demo {
     }
   }
 
-  async executeCode(code) {
+  async executeCode(code, options = {}) {
     const resultEl = document.getElementById('execute-result');
 
     try {
       resultEl.innerHTML = '<div class="status pending"><div class="spinner"></div><div>Executing code...</div></div>';
 
+      // Read the zero memory toggle state
+      const shouldZeroMemory = document.getElementById('zero-memory-toggle').checked;
+      console.log('🔍 [Demo] Zero Memory toggle state:', shouldZeroMemory);
+
       const { result, metrics, totalDurationMs } = await this.enclave.execute(code, {
         message: 'Hello from host!',
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        zeroMemory: shouldZeroMemory
       });
+
+      console.log('🔍 [Demo] Received metrics.memoryZeroed:', metrics.memoryZeroed);
 
       // Update metrics
       this.updateMetrics(metrics);
 
-      // Display result
+      // Display result with color-coded memory status
+      const memoryStatus = metrics.memoryZeroed ?
+        '<span style="color: #28a745;">true ✓</span>' :
+        '<span style="color: #dc3545;">false ✗</span>';
+
       resultEl.innerHTML = `
         <div class="status success">
           <div>✓ Execution successful!</div>
@@ -105,7 +129,7 @@ class Demo {
 
 Total Duration: ${totalDurationMs.toFixed(2)}ms
 Key Exposure: ${metrics.keyExposureMs.toFixed(2)}ms
-Memory Zeroed: ${metrics.memoryZeroed}</div>
+Memory Zeroed: ${memoryStatus}</div>
       `;
     } catch (error) {
       console.error('Execution error:', error);
@@ -144,9 +168,23 @@ try {
 }
 `;
 
-    // Set the code and execute
+    // Set the textarea content, then execute
     document.getElementById('code-input').value = maliciousCode;
     await this.executeCode(maliciousCode);
+  }
+
+  async tryFibonacciCode() {
+    const fibonacciCode = `// Example: Calculate Fibonacci
+function fibonacci(n) {
+  if (n <= 1) return n;
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+return fibonacci(10)`;
+
+    // Set the textarea content, then execute
+    document.getElementById('code-input').value = fibonacciCode;
+    await this.executeCode(fibonacciCode);
   }
 
   async signTransaction() {
@@ -159,15 +197,17 @@ try {
       const mockEncryptedKey = new Uint8Array(64);
       crypto.getRandomValues(mockEncryptedKey);
 
-      // Mock NEAR transaction
+      // Mock NEAR transaction (all required fields)
       const transaction = {
         signerId: 'alice.near',
+        publicKey: 'ed25519:DcA2MzgpJbrUATQLLceocVckhhAqrkingax4oJ9kZ847', // Mock public key
         receiverId: 'bob.near',
+        nonce: String(Date.now()), // NEAR expects string
+        blockHash: '4kxfS5Bz9wEhzbMbWbWjmPUBmJVsFcFjJVJkZhFZhHVC', // Mock block hash (32 bytes base58)
         actions: [{
           type: 'Transfer',
-          amount: '1000000000000000000000000' // 1 NEAR
-        }],
-        nonce: Date.now()
+          deposit: '1000000000000000000000000' // 1 NEAR (field name is 'deposit' not 'amount')
+        }]
       };
 
       const { signature, metrics, totalDurationMs } = await this.enclave.signTransaction(
