@@ -10,6 +10,8 @@ A defense-in-depth approach to browser security that provides measurable improve
 - **QuickJS-WASM sandbox** - Memory-isolated execution
 - **Ephemeral computation** - Keys exist plaintext only during ~30-50ms operations
 
+See [WHAT_IT_IS.md](WHAT_IT_IS.md) for more.
+
 **Not a hardware TEE** - This is a software-based approach providing practical security improvements for browser environments.
 
 ## Quick Start
@@ -122,6 +124,8 @@ const { result } = await enclave.execute(`
 ```
 
 ## Architecture
+
+See also [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Dual Backend Support (Choose One!)
 
