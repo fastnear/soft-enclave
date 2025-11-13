@@ -1,6 +1,4 @@
-Here you go — an ARCHITECTURE.md you can drop straight into the repo.
-
-# Soft Enclave Architecture
+# `soft-enclave1 Architecture
 
 ## 0. Purpose
 
